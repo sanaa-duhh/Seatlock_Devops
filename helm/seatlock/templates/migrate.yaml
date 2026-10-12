@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seatlock-migrate-{{ printf "%s%s" .Values.backend.tag .Values.backend.digest | sha256sum | trunc 8 }}-{{ .Release.Revision }}
+  labels: {{- include "seatlock.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 2
+  activeDeadlineSeconds: 180
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "seatlock.image" .Values.backend | quote }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: [sh, -c]
+          args:
+            - "python -m app.wait_db && alembic upgrade head{{ if .Values.seedDemo }} && python -m app.seed{{ end }}"
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: {{ .Values.existingSecret }}, key: database-url}
+          resources:
+            requests: {cpu: 50m, memory: 96Mi}
+            limits: {cpu: 500m, memory: 256Mi}

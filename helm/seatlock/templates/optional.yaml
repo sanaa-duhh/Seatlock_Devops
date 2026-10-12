@@ -1,0 +1,81 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: seatlock-backend
+  labels: {{- include "seatlock.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: seatlock-backend}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: {{ .Values.hpa.cpuTarget }}}
+---
+{{- end }}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: seatlock
+  labels: {{- include "seatlock.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tlsSecret }}
+  tls:
+    - hosts: [{{ .Values.ingress.host | quote }}]
+      secretName: {{ .Values.ingress.tlsSecret }}
+  {{- end }}
+  {{- $hosts := list .Values.ingress.host }}
+  {{- if and .Values.ingress.localhostAlias (ne .Values.ingress.host "localhost") }}
+  {{- $hosts = append $hosts "localhost" }}
+  {{- end }}
+  rules:
+    {{- range $hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: {service: {name: backend, port: {name: http}}}
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: frontend, port: {name: http}}}
+    {{- end }}
+---
+{{- end }}
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: seatlock
+  labels: {release: {{ .Values.monitoring.prometheusRelease }}}
+spec:
+  jobLabel: app.kubernetes.io/part-of
+  selector:
+    matchLabels: {app.kubernetes.io/name: seatlock-backend}
+  endpoints:
+    - {port: http, path: /metrics, interval: 15s}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: seatlock
+  labels: {release: {{ .Values.monitoring.prometheusRelease }}}
+spec:
+  groups:
+    - name: seatlock
+      rules:
+        - alert: SeatLockAPIUnavailable
+          expr: up{job="seatlock",namespace="{{ .Release.Namespace }}"} == 0 or kube_deployment_status_replicas_available{deployment="seatlock-backend",namespace="{{ .Release.Namespace }}"} == 0
+          for: 30s
+          labels: {severity: critical}
+          annotations: {summary: 'SeatLock API has stopped responding to scrapes'}
+        - alert: SeatLockServerErrors
+          expr: sum(rate(seatlock_http_requests_total{status=~"5..",namespace="{{ .Release.Namespace }}"}[2m])) > 0
+          for: 30s
+          labels: {severity: warning}
+          annotations: {summary: 'SeatLock is returning server errors'}
+{{- end }}

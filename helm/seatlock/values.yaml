@@ -1,0 +1,41 @@
+backend:
+  image: seatlock-backend
+  tag: local
+  digest: ""
+frontend:
+  image: seatlock-frontend
+  tag: local
+  digest: ""
+imagePullPolicy: IfNotPresent
+imagePullSecrets: []
+replicaCount: 2
+existingSecret: seatlock-runtime
+config:
+  holdSeconds: 300
+  cookieSecure: "false"
+  allowedOrigins: "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3003,http://localhost:3004,http://seatlock.local"
+postgres:
+  image: postgres:15
+  storage: 2Gi
+  storageClass: ""
+ingress:
+  enabled: false
+  className: seatlock-traefik
+  host: seatlock.local
+  localhostAlias: false
+  tlsSecret: ""
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  cpuTarget: 60
+monitoring:
+  enabled: false
+  prometheusRelease: monitoring
+seedDemo: true
+backendResources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {cpu: 500m, memory: 256Mi}
+frontendResources:
+  requests: {cpu: 25m, memory: 32Mi}
+  limits: {cpu: 100m, memory: 64Mi}

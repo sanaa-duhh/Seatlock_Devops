@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seatlock-config
+  labels: {{- include "seatlock.labels" . | nindent 4 }}
+data:
+  HOLD_SECONDS: {{ .Values.config.holdSeconds | quote }}
+  COOKIE_SECURE: {{ .Values.config.cookieSecure | quote }}
+  ALLOWED_ORIGINS: {{ .Values.config.allowedOrigins | quote }}
+  APP_VERSION: {{ .Values.backend.tag | quote }}
