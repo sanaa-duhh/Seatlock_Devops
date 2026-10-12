@@ -22,7 +22,7 @@ spec:
           command: [sh, -c]
           args:
             - "python -m app.wait_db && alembic upgrade head{{ if .Values.seedDemo }} && python -m app.seed{{ end }}"
-          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -30,3 +30,5 @@ spec:
           resources:
             requests: {cpu: 50m, memory: 96Mi}
             limits: {cpu: 500m, memory: 256Mi}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]

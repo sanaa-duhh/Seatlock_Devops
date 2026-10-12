@@ -51,7 +51,7 @@ spec:
         - name: loki
           image: grafana/loki:3.7.8
           args: [-config.file=/etc/loki/loki.yaml]
-          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           ports: [{name: http, containerPort: 3100}]
           readinessProbe: {httpGet: {path: /ready, port: http}, initialDelaySeconds: 15}
           resources:
@@ -60,7 +60,9 @@ spec:
           volumeMounts:
             - {name: config, mountPath: /etc/loki}
             - {name: data, mountPath: /loki}
+            - {name: tmp, mountPath: /tmp}
       volumes:
+        - {name: tmp, emptyDir: {}}
         - name: config
           configMap: {name: seatlock-loki}
   volumeClaimTemplates:
@@ -170,14 +172,16 @@ spec:
         - name: alloy
           image: grafana/alloy:v1.20.1
           args: [run, /etc/alloy/config.alloy, --storage.path=/var/lib/alloy]
-          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           resources:
             requests: {cpu: 50m, memory: 64Mi}
             limits: {cpu: 250m, memory: 192Mi}
           volumeMounts:
             - {name: config, mountPath: /etc/alloy}
             - {name: data, mountPath: /var/lib/alloy}
+            - {name: tmp, mountPath: /tmp}
       volumes:
+        - {name: tmp, emptyDir: {}}
         - name: config
           configMap: {name: seatlock-alloy}
         - name: data

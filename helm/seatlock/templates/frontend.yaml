@@ -20,7 +20,7 @@ spec:
         - name: frontend
           image: {{ include "seatlock.image" .Values.frontend | quote }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
-          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           lifecycle:
             preStop: {exec: {command: [sh, -c, "sleep 5"]}}
           ports: [{name: http, containerPort: 8080}]
@@ -33,6 +33,12 @@ spec:
           readinessProbe:
             httpGet: {path: /healthz, port: http}
           resources: {{ toYaml .Values.frontendResources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: nginx-conf, mountPath: /etc/nginx/conf.d}
+      volumes:
+        - {name: tmp, emptyDir: {}}
+        - {name: nginx-conf, emptyDir: {}}
 ---
 apiVersion: v1
 kind: Service

@@ -27,7 +27,7 @@ spec:
       containers:
         - name: postgres
           image: {{ .Values.postgres.image | quote }}
-          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
           ports: [{name: postgres, containerPort: 5432}]
           env:
             - {name: POSTGRES_USER, value: seatlock}
@@ -42,7 +42,13 @@ spec:
           resources:
             requests: {cpu: 100m, memory: 128Mi}
             limits: {cpu: 500m, memory: 256Mi}
-          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: run, mountPath: /var/run/postgresql}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: run, emptyDir: {}}
+        - {name: tmp, emptyDir: {}}
   volumeClaimTemplates:
     - metadata: {name: data}
       spec:
