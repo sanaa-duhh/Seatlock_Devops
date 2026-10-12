@@ -1,0 +1,16 @@
+# EKS Ingress controller: one internet-facing AWS Network Load Balancer.
+service:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+  spec:
+    type: LoadBalancer
+ingressClass:
+  isDefaultClass: true
+  name: traefik
+providers:
+  kubernetesCRD: {enabled: false}
+  kubernetesIngress:
+    publishedService: {enabled: true}
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {cpu: 500m, memory: 192Mi}
