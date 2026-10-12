@@ -1,0 +1,13 @@
+groups:
+  - name: seatlock
+    rules:
+      - alert: SeatLockAPIUnavailable
+        expr: up{job="seatlock"} == 0
+        for: 30s
+        labels: {severity: critical}
+        annotations: {summary: 'SeatLock API has stopped responding to scrapes'}
+      - alert: SeatLockServerErrors
+        expr: sum(rate(seatlock_http_requests_total{status=~"5.."}[2m])) > 0
+        for: 30s
+        labels: {severity: warning}
+        annotations: {summary: 'SeatLock is returning server errors'}
