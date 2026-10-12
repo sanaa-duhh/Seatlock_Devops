@@ -1,4 +1,4 @@
-"""Bounded HTTP load for local observability. Explicitly rejects remote hosts."""
+"""Bounded HTTP load for the HPA demo: local stacks or this project's own AWS load balancer only."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import time
@@ -10,8 +10,9 @@ parser.add_argument("--url", default="http://localhost:8000/api/events/1/seats")
 parser.add_argument("--seconds", type=int, default=30)
 parser.add_argument("--workers", type=int, default=4)
 args = parser.parse_args()
-if urlparse(args.url).hostname not in {"localhost", "127.0.0.1", "backend"}:
-    raise SystemExit("Only local SeatLock load is permitted")
+host = urlparse(args.url).hostname or ""
+if host not in {"localhost", "127.0.0.1", "backend"} and not host.endswith(".elb.amazonaws.com"):
+    raise SystemExit("Only local SeatLock or its EKS load balancer may be load-tested")
 if not 1 <= args.seconds <= 120 or not 1 <= args.workers <= 16:
     raise SystemExit("Bounded load: 1–120 seconds, 1–16 workers")
 deadline = time.monotonic() + args.seconds
