@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+# This exact public Python release-signing fingerprint appears in Trivy image
+# metadata; it is not private key material. All other rules/findings still fail.
+[[allowlists]]
+description = "Public Python release signing fingerprint in image scanner metadata"
+regexTarget = "secret"
+regexes = ['''^A035C8C19219BA821ECEA86B64E628F8D684696D$''']
