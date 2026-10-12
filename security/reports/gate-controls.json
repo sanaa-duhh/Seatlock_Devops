@@ -1,0 +1,21 @@
+{
+  "time": "2026-10-12T21:07:05.876058+00:00",
+  "gitleaks": {
+    "version": "8.30.1",
+    "config": ".gitleaks.toml",
+    "exit_code": 1,
+    "synthetic_findings": 2,
+    "locations": [
+      "sample.env",
+      "security/reports/backend.json"
+    ],
+    "public_fingerprint_only_passes": true,
+    "secret_on_same_line_still_fails": true,
+    "note": "Unused synthetic PAT; no path or whole-line exceptions."
+  },
+  "bandit": {
+    "exit_code": 1,
+    "finding": "B602",
+    "note": "Disposable shell=True fixture; no unsafe command executed."
+  }
+}
