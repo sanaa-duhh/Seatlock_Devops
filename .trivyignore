@@ -1,0 +1,10 @@
+# Accepted IaC findings. Each entry is a deliberate trade-off, reviewed and documented.
+
+# EKS API endpoint is public so GitHub-hosted runners (no fixed IPs) can deploy.
+# Every request is still authenticated with IAM, and the deploy role is limited
+# to one namespace. Narrow cluster_endpoint_public_access_cidrs for laptop-only use.
+AWS-0040
+AWS-0041
+
+# Worker nodes need outbound internet (via NAT) to pull images from GHCR and ECR.
+AWS-0104
