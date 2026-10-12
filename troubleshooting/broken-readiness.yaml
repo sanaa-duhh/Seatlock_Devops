@@ -1,0 +1,25 @@
+# LAB 3 - Running but never Ready: the readiness probe checks a path that 404s.
+# Kubernetes keeps the Pod out of Service endpoints, so it receives no traffic.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-ready
+  namespace: seatlock-drill
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: lab-ready}
+  template:
+    metadata:
+      labels: {app: lab-ready}
+    spec:
+      containers:
+        - name: web
+          image: nginxinc/nginx-unprivileged:stable-alpine
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /healthz-typo, port: http} # BUG: nginx serves / not /healthz-typo
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}

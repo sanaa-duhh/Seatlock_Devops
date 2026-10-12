@@ -1,0 +1,31 @@
+# LAB 2 - Service with no endpoints: the selector matches no Pod labels.
+# The Pods are healthy; traffic still fails because the Service selects nothing.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-api
+  namespace: seatlock-drill
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: lab-api}
+  template:
+    metadata:
+      labels: {app: lab-api}
+    spec:
+      containers:
+        - name: api
+          image: nginxinc/nginx-unprivileged:stable-alpine
+          ports: [{name: http, containerPort: 8080}]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab-api
+  namespace: seatlock-drill
+spec:
+  selector: {app: lab-api-v2} # BUG: no Pod carries this label
+  ports: [{port: 80, targetPort: http}]

@@ -1,0 +1,23 @@
+# LAB 1 - ImagePullBackOff: the tag does not exist in the registry.
+# Fix: correct the tag (see README.md), then `kubectl apply -f` again.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-web
+  namespace: seatlock-drill
+  labels: {app: lab-web}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: lab-web}
+  template:
+    metadata:
+      labels: {app: lab-web}
+    spec:
+      containers:
+        - name: web
+          image: nginxinc/nginx-unprivileged:1.99-does-not-exist # BUG: no such tag
+          ports: [{containerPort: 8080}]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
