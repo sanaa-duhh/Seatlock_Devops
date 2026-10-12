@@ -1,0 +1,59 @@
+# Local configuration and credentials; commit examples with dummy values only.
+.env
+.env.*
+!.env.example
+!.env.*.example
+.secrets/
+*.pem
+*.key
+kubeconfig*
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+
+# JavaScript and build output
+node_modules/
+dist/
+*.tsbuildinfo
+build/
+coverage/
+playwright-report/
+test-results/
+
+# Terraform: commit .terraform.lock.hcl, but never state or saved plans.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local persistence and unsanitized execution artifacts
+.local/
+.artifacts/
+*.db
+*.sqlite3
+*.log
+
+# Machine/editor files
+.DS_Store
+.idea/
+.vscode/
