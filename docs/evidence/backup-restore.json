@@ -1,0 +1,46 @@
+{
+  "time": "2026-10-07T17:26:06.575289+00:00",
+  "source_namespace": "seatlock",
+  "restore_namespace": "seatlock-drill",
+  "new_disposable_database": true,
+  "source_counts": {
+    "events": {
+      "count": 4,
+      "checksum": "bca1897ce730510eb093bb8c7b6473be"
+    },
+    "seats": {
+      "count": 288,
+      "checksum": "eb18c16c613583f7b1050b2243000bdf"
+    },
+    "holds": {
+      "count": 6,
+      "checksum": "b256d874ddb4cafd8474767377128d1f"
+    },
+    "audit_events": {
+      "count": 18,
+      "checksum": "207b87d09251a30a6eaeddeb8168557f"
+    }
+  },
+  "restored_counts": {
+    "events": {
+      "count": 4,
+      "checksum": "bca1897ce730510eb093bb8c7b6473be"
+    },
+    "seats": {
+      "count": 288,
+      "checksum": "eb18c16c613583f7b1050b2243000bdf"
+    },
+    "holds": {
+      "count": 6,
+      "checksum": "b256d874ddb4cafd8474767377128d1f"
+    },
+    "audit_events": {
+      "count": 18,
+      "checksum": "207b87d09251a30a6eaeddeb8168557f"
+    }
+  },
+  "backup_bytes": 15791,
+  "backup_location": "Ignored .artifacts/; private mode 600",
+  "verification": "pg_restore succeeded, schema/constraints restored, all four table counts AND row-content checksums match",
+  "cleanup": "Disposable restore DB dropped; main/drill application databases unchanged"
+}

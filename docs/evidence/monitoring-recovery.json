@@ -1,0 +1,49 @@
+{
+  "time": "2026-10-07T17:37:20.582326+00:00",
+  "context": "minikube",
+  "namespace": "seatlock-monitoring",
+  "prior_observation": {
+    "pod_ready": "2/3",
+    "cpu_usage_millicores": 996,
+    "cpu_limit_millicores": 1000,
+    "pod_memory_mib": 656,
+    "main_container_memory_limit_mib": 512,
+    "symptoms": [
+      "HTTP timeout",
+      "Grafana apiserver handler timeout/context canceled"
+    ],
+    "limitation": "No OOM claim; memory figure includes sidecars. Saturation observed, exact internal cause not established."
+  },
+  "fix": {
+    "main_container_memory_limit": "1Gi",
+    "cpu_limit": "1500m",
+    "startup_probe_seconds": 450,
+    "liveness_failure_window_seconds": 100
+  },
+  "after": {
+    "health": {
+      "database": "ok",
+      "version": "13.2.3",
+      "commit": "90ffed056f0884267356c12a0eeb72a022af53f1"
+    },
+    "pod": "monitoring-grafana-5bf4c4d886-2tk2h",
+    "containers": [
+      {
+        "name": "grafana",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "name": "grafana-sc-dashboard",
+        "ready": true,
+        "restarts": 0
+      },
+      {
+        "name": "grafana-sc-datasources",
+        "ready": true,
+        "restarts": 0
+      }
+    ]
+  },
+  "limitation": "Healthy after rollout and dashboard checks; no multi-hour soak guarantee."
+}

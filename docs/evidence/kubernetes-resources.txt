@@ -1,0 +1,22 @@
+NAME                                     READY   STATUS      RESTARTS   AGE     IP             NODE       NOMINATED NODE   READINESS GATES
+pod/seatlock-backend-84c4cbf698-ll5lh    1/1     Running     0          67s     10.244.0.141   minikube   <none>           <none>
+pod/seatlock-backend-84c4cbf698-z5zc2    1/1     Running     0          74s     10.244.0.137   minikube   <none>           <none>
+pod/seatlock-frontend-749477cdf5-5vqxd   1/1     Running     0          74s     10.244.0.138   minikube   <none>           <none>
+pod/seatlock-frontend-749477cdf5-xntqz   1/1     Running     0          69s     10.244.0.140   minikube   <none>           <none>
+pod/seatlock-migrate-e6d8ab08-13-7nccz   0/1     Completed   0          60s     10.244.0.142   minikube   <none>           <none>
+pod/seatlock-migrate-e6d8ab08-3-smxrc    0/1     Completed   0          4h49m   10.244.0.66    minikube   <none>           <none>
+pod/seatlock-postgres-0                  1/1     Running     0          93s     10.244.0.131   minikube   <none>           <none>
+
+NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE     SELECTOR
+service/backend    ClusterIP   10.98.222.193   <none>        8000/TCP   6h26m   app.kubernetes.io/name=seatlock-backend
+service/frontend   ClusterIP   10.109.151.65   <none>        80/TCP     6h26m   app.kubernetes.io/name=seatlock-frontend
+service/postgres   ClusterIP   None            <none>        5432/TCP   6h26m   app.kubernetes.io/name=seatlock-postgres
+
+NAME                                                   REFERENCE                     TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/seatlock-backend   Deployment/seatlock-backend   cpu: <unknown>/60%   2         4         2          6h26m
+
+NAME                                             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE     VOLUMEMODE
+persistentvolumeclaim/data-seatlock-postgres-0   Bound    pvc-6f55607d-a04c-4dee-9033-b85ceaa9b4ff   2Gi        RWO            standard       <unset>                 6h26m   Filesystem
+
+NAME                                 CLASS              HOSTS                      ADDRESS   PORTS   AGE
+ingress.networking.k8s.io/seatlock   seatlock-traefik   seatlock.local,localhost             80      5h1m

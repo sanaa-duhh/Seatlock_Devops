@@ -1,0 +1,191 @@
+{
+  "namespace": "seatlock",
+  "context": "minikube",
+  "demo_reference": "SL-C08EA3F47A7C",
+  "before": {
+    "time": "2026-10-07T17:35:37.020508+00:00",
+    "pvc_uid": "6f55607d-a04c-4dee-9033-b85ceaa9b4ff",
+    "pods": [
+      {
+        "name": "seatlock-backend-84c4cbf698-8vw4m",
+        "uid": "4c218b66-404a-4281-9c42-ff8efc847ed4",
+        "ready": true,
+        "images": [
+          "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+        ]
+      },
+      {
+        "name": "seatlock-backend-84c4cbf698-kqkq8",
+        "uid": "9cc98165-f753-4d7e-8f96-289bfd95f5c7",
+        "ready": true,
+        "images": [
+          "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+        ]
+      },
+      {
+        "name": "seatlock-postgres-0",
+        "uid": "7c87635d-c47e-4ac8-b185-87447166cd7f",
+        "ready": true,
+        "images": [
+          "sha256:5782f64d0bd510051a93176c326a09595d48465418eb2afa4b28df68c5ae95c3"
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "action": "Replace API pods",
+      "ticket_preserved": true,
+      "resources": {
+        "time": "2026-10-07T17:35:46.603114+00:00",
+        "pvc_uid": "6f55607d-a04c-4dee-9033-b85ceaa9b4ff",
+        "pods": [
+          {
+            "name": "seatlock-backend-84c4cbf698-dw4h2",
+            "uid": "9bf34699-1009-4546-b679-bb83d509b744",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-backend-84c4cbf698-js4d7",
+            "uid": "cc292780-78ed-4b26-abe2-460e805e3364",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-postgres-0",
+            "uid": "7c87635d-c47e-4ac8-b185-87447166cd7f",
+            "ready": true,
+            "images": [
+              "sha256:5782f64d0bd510051a93176c326a09595d48465418eb2afa4b28df68c5ae95c3"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "action": "Replace PostgreSQL pod",
+      "same_pvc": true,
+      "ticket_preserved": true,
+      "resources": {
+        "time": "2026-10-07T17:35:50.857981+00:00",
+        "pvc_uid": "6f55607d-a04c-4dee-9033-b85ceaa9b4ff",
+        "pods": [
+          {
+            "name": "seatlock-backend-84c4cbf698-dw4h2",
+            "uid": "9bf34699-1009-4546-b679-bb83d509b744",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-backend-84c4cbf698-js4d7",
+            "uid": "cc292780-78ed-4b26-abe2-460e805e3364",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-postgres-0",
+            "uid": "baa32f07-4437-420d-bc66-bb2b27de3145",
+            "ready": true,
+            "images": [
+              "sha256:5782f64d0bd510051a93176c326a09595d48465418eb2afa4b28df68c5ae95c3"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "action": "Helm rollback to healthy revision 2",
+      "ticket_preserved": true,
+      "resources": {
+        "time": "2026-10-07T17:36:06.305150+00:00",
+        "pvc_uid": "6f55607d-a04c-4dee-9033-b85ceaa9b4ff",
+        "pods": [
+          {
+            "name": "seatlock-backend-7c9c9bbfc9-n7kmv",
+            "uid": "7b8ab258-2db0-4d2a-8be4-f945b494a3ef",
+            "ready": true,
+            "images": [
+              "sha256:bef9fcacb3668b99f6d0fbe05be9225c24c2f7531f271cc6c1e0a683d81c93bf"
+            ]
+          },
+          {
+            "name": "seatlock-backend-7c9c9bbfc9-rb2tl",
+            "uid": "ca91e6a2-292f-4fd7-9dc3-4361d95d09a5",
+            "ready": true,
+            "images": [
+              "sha256:bef9fcacb3668b99f6d0fbe05be9225c24c2f7531f271cc6c1e0a683d81c93bf"
+            ]
+          },
+          {
+            "name": "seatlock-backend-84c4cbf698-dw4h2",
+            "uid": "9bf34699-1009-4546-b679-bb83d509b744",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-postgres-0",
+            "uid": "baa32f07-4437-420d-bc66-bb2b27de3145",
+            "ready": true,
+            "images": [
+              "sha256:5782f64d0bd510051a93176c326a09595d48465418eb2afa4b28df68c5ae95c3"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "action": "Restore saved current release values",
+      "ticket_preserved": true,
+      "resources": {
+        "time": "2026-10-07T17:36:20.102168+00:00",
+        "pvc_uid": "6f55607d-a04c-4dee-9033-b85ceaa9b4ff",
+        "pods": [
+          {
+            "name": "seatlock-backend-7c9c9bbfc9-n7kmv",
+            "uid": "7b8ab258-2db0-4d2a-8be4-f945b494a3ef",
+            "ready": true,
+            "images": [
+              "sha256:bef9fcacb3668b99f6d0fbe05be9225c24c2f7531f271cc6c1e0a683d81c93bf"
+            ]
+          },
+          {
+            "name": "seatlock-backend-84c4cbf698-ll5lh",
+            "uid": "be6b266d-2e9d-4c5e-9104-4d0d6020aa20",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-backend-84c4cbf698-z5zc2",
+            "uid": "5cafa704-ceb0-4503-9b4c-c9d2d41a214e",
+            "ready": true,
+            "images": [
+              "sha256:1cb300c15578be7f825a6c78dbdfb3014d61e0e0ca058e9cbd793d94969c5665"
+            ]
+          },
+          {
+            "name": "seatlock-postgres-0",
+            "uid": "baa32f07-4437-420d-bc66-bb2b27de3145",
+            "ready": true,
+            "images": [
+              "sha256:5782f64d0bd510051a93176c326a09595d48465418eb2afa4b28df68c5ae95c3"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "demo_ticket_cancelled": true
+}

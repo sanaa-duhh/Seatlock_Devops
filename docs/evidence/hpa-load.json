@@ -1,0 +1,138 @@
+[
+  {
+    "time": 1791376829.2634509,
+    "currentReplicas": 2,
+    "desiredReplicas": 2,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 5,
+            "averageValue": "5m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376844.359783,
+    "currentReplicas": 2,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 145,
+            "averageValue": "145m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376859.573847,
+    "currentReplicas": 4,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 145,
+            "averageValue": "145m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376874.964607,
+    "currentReplicas": 4,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 145,
+            "averageValue": "145m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376890.259299,
+    "currentReplicas": 4,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 145,
+            "averageValue": "145m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376905.6610382,
+    "currentReplicas": 4,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 223,
+            "averageValue": "223m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376921.257177,
+    "currentReplicas": 4,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 223,
+            "averageValue": "223m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  },
+  {
+    "time": 1791376936.962448,
+    "currentReplicas": 4,
+    "desiredReplicas": 4,
+    "metrics": [
+      {
+        "resource": {
+          "current": {
+            "averageUtilization": 223,
+            "averageValue": "223m"
+          },
+          "name": "cpu"
+        },
+        "type": "Resource"
+      }
+    ]
+  }
+]

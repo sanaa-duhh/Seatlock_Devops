@@ -1,0 +1,48 @@
+{
+  "conditions": [
+    {
+      "lastTransitionTime": "2026-10-07T11:10:44Z",
+      "message": "recommended size matches current size",
+      "reason": "ReadyForNewScale",
+      "status": "True",
+      "type": "AbleToScale"
+    },
+    {
+      "lastTransitionTime": "2026-10-07T11:10:44Z",
+      "message": "the HPA controller did not scale the workload to zero",
+      "reason": "NotScaledToZero",
+      "status": "False",
+      "type": "ScaledToZero"
+    },
+    {
+      "lastTransitionTime": "2026-10-07T13:05:28Z",
+      "message": "the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)",
+      "reason": "ValidMetricFound",
+      "status": "True",
+      "type": "ScalingActive"
+    },
+    {
+      "lastTransitionTime": "2026-10-07T13:07:43Z",
+      "message": "the desired replica count is less than the minimum replica count",
+      "reason": "TooFewReplicas",
+      "status": "True",
+      "type": "ScalingLimited"
+    }
+  ],
+  "currentMetrics": [
+    {
+      "resource": {
+        "current": {
+          "averageUtilization": 7,
+          "averageValue": "7m"
+        },
+        "name": "cpu"
+      },
+      "type": "Resource"
+    }
+  ],
+  "currentReplicas": 2,
+  "desiredReplicas": 2,
+  "lastScaleTime": "2026-10-07T12:50:25Z",
+  "observedGeneration": 1
+}

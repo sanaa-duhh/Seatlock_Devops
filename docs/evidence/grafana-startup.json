@@ -1,0 +1,28 @@
+[
+  {
+    "pod": "monitoring-grafana-9f6699f9f-9fv5m",
+    "container": "grafana",
+    "lastState": {
+      "terminated": {
+        "containerID": "containerd://e3dc8ba0ac210ac8ef937620edb8d1f7269fd62af2a253ce985dee2aba7af613",
+        "exitCode": 2,
+        "finishedAt": "2026-10-07T12:42:33Z",
+        "reason": "Error",
+        "startedAt": "2026-10-07T12:39:39Z"
+      }
+    },
+    "restartCount": 1
+  },
+  {
+    "pod": "monitoring-grafana-9f6699f9f-9fv5m",
+    "container": "grafana-sc-dashboard",
+    "lastState": {},
+    "restartCount": 0
+  },
+  {
+    "pod": "monitoring-grafana-9f6699f9f-9fv5m",
+    "container": "grafana-sc-datasources",
+    "lastState": {},
+    "restartCount": 0
+  }
+]

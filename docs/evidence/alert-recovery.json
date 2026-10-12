@@ -1,0 +1,31 @@
+{
+  "namespace": "seatlock-drill",
+  "context": "minikube",
+  "started_at": "2026-10-07T12:59:58.329499+00:00",
+  "baseline": [],
+  "firing": [
+    {
+      "labels": {
+        "alertname": "SeatLockAPIUnavailable",
+        "container": "kube-state-metrics",
+        "deployment": "seatlock-backend",
+        "endpoint": "http",
+        "instance": "10.244.0.46:8080",
+        "job": "kube-state-metrics",
+        "namespace": "seatlock-drill",
+        "pod": "monitoring-kube-state-metrics-78fd56fc4b-rnd9l",
+        "service": "monitoring-kube-state-metrics",
+        "severity": "critical"
+      },
+      "annotations": {
+        "summary": "SeatLock API has stopped responding to scrapes"
+      },
+      "state": "firing",
+      "activeAt": "2026-10-07T13:00:36.162728176Z",
+      "value": "0e+00"
+    }
+  ],
+  "firing_observed_at": "2026-10-07T13:01:08.683398+00:00",
+  "after": [],
+  "recovered_at": "2026-10-07T13:01:40.703359+00:00"
+}
