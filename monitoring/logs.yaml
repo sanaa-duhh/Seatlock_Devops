@@ -1,0 +1,201 @@
+# Single-node local log storage; no cloud bucket, public endpoint, or Docker socket.
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: seatlock-loki, namespace: seatlock-monitoring}
+data:
+  loki.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      replication_factor: 1
+      ring:
+        kvstore: {store: inmemory}
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+    schema_config:
+      configs:
+        - from: 2026-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index: {prefix: index_, period: 24h}
+    limits_config:
+      retention_period: 24h
+      ingestion_rate_mb: 2
+      ingestion_burst_size_mb: 4
+      max_query_parallelism: 4
+    compactor:
+      working_directory: /loki/compactor
+      retention_enabled: true
+      delete_request_store: filesystem
+    analytics: {reporting_enabled: false}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: seatlock-loki, namespace: seatlock-monitoring}
+spec:
+  serviceName: seatlock-loki
+  replicas: 1
+  selector: {matchLabels: {app: seatlock-loki}}
+  template:
+    metadata: {labels: {app: seatlock-loki}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: loki
+          image: grafana/loki:3.7.8
+          args: [-config.file=/etc/loki/loki.yaml]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          ports: [{name: http, containerPort: 3100}]
+          readinessProbe: {httpGet: {path: /ready, port: http}, initialDelaySeconds: 15}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 384Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/loki}
+            - {name: data, mountPath: /loki}
+      volumes:
+        - name: config
+          configMap: {name: seatlock-loki}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: {requests: {storage: 1Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: seatlock-loki, namespace: seatlock-monitoring}
+spec:
+  selector: {app: seatlock-loki}
+  ports: [{name: http, port: 3100}]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: seatlock-alloy, namespace: seatlock-monitoring}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: seatlock-log-reader, namespace: seatlock}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: seatlock-log-reader, namespace: seatlock}
+subjects: [{kind: ServiceAccount, name: seatlock-alloy, namespace: seatlock-monitoring}]
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: seatlock-log-reader}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: seatlock-log-reader, namespace: seatlock-drill}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: seatlock-log-reader, namespace: seatlock-drill}
+subjects: [{kind: ServiceAccount, name: seatlock-alloy, namespace: seatlock-monitoring}]
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: seatlock-log-reader}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: seatlock-alloy, namespace: seatlock-monitoring}
+data:
+  config.alloy: |
+    discovery.kubernetes "pods" {
+      role = "pod"
+      namespaces { names = ["seatlock", "seatlock-drill"] }
+    }
+    discovery.relabel "api_logs" {
+      targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        regex = "seatlock-backend"
+        action = "keep"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label = "container"
+      }
+      rule {
+        target_label = "job"
+        replacement = "seatlock"
+      }
+    }
+    loki.source.kubernetes "api_logs" {
+      targets = discovery.relabel.api_logs.output
+      forward_to = [loki.write.local.receiver]
+    }
+    loki.write "local" {
+      endpoint { url = "http://seatlock-loki:3100/loki/api/v1/push" }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: seatlock-alloy, namespace: seatlock-monitoring}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: seatlock-alloy}}
+  template:
+    metadata: {labels: {app: seatlock-alloy}}
+    spec:
+      serviceAccountName: seatlock-alloy
+      securityContext: {runAsNonRoot: true, runAsUser: 473, fsGroup: 473}
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.20.1
+          args: [run, /etc/alloy/config.alloy, --storage.path=/var/lib/alloy]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 192Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/alloy}
+            - {name: data, mountPath: /var/lib/alloy}
+      volumes:
+        - name: config
+          configMap: {name: seatlock-alloy}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seatlock-loki-datasource
+  namespace: seatlock-monitoring
+  labels: {grafana_datasource: "1"}
+data:
+  loki.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://seatlock-loki:3100
+        editable: false

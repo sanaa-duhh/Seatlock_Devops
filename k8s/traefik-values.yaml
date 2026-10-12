@@ -1,0 +1,15 @@
+# Local only: no public load balancer or default-class takeover.
+service:
+  spec:
+    type: ClusterIP
+ingressClass:
+  isDefaultClass: false
+  name: seatlock-traefik
+providers:
+  kubernetesCRD: {enabled: false}
+  kubernetesIngress:
+    namespaces: [seatlock, seatlock-drill]
+    publishedService: {enabled: false}
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {cpu: 250m, memory: 128Mi}

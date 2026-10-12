@@ -1,0 +1,51 @@
+# Platform chart values, distinct from the application chart.
+grafana:
+  defaultDashboardsEnabled: false
+  deploymentStrategy: {type: Recreate}
+  startupProbe:
+    httpGet: {path: /api/health, port: 3000}
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 90
+  readinessProbe:
+    httpGet: {path: /api/health, port: 3000}
+    timeoutSeconds: 5
+  livenessProbe:
+    httpGet: {path: /api/health, port: 3000}
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 10
+  admin:
+    existingSecret: monitoring-admin
+    userKey: username
+    passwordKey: password
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+  resources:
+    requests: {cpu: 200m, memory: 384Mi}
+    limits: {cpu: 1500m, memory: 1Gi}
+  service: {type: ClusterIP}
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {memory: 512Mi}
+    serviceMonitorSelectorNilUsesHelmValues: true
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 20m, memory: 64Mi}
+      limits: {memory: 128Mi}
+# These endpoints are not reachable in the local Minikube configuration.
+kubeEtcd: {enabled: false}
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeProxy: {enabled: false}
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 192Mi}
