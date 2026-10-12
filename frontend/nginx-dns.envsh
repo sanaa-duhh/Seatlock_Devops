@@ -1,0 +1,4 @@
+#!/bin/sh
+# Use Docker's embedded resolver or the cluster resolver from this container.
+SEATLOCK_DNS="$(awk '/^nameserver / { print $2; exit }' /etc/resolv.conf)"
+export SEATLOCK_DNS
