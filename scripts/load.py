@@ -9,10 +9,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--url", default="http://localhost:8000/api/events/1/seats")
 parser.add_argument("--seconds", type=int, default=30)
 parser.add_argument("--workers", type=int, default=4)
+parser.add_argument("--own-deployment", action="store_true", help="target is your own EKS node IP (hostport mode)")
 args = parser.parse_args()
 host = urlparse(args.url).hostname or ""
-if host not in {"localhost", "127.0.0.1", "backend"} and not host.endswith(".elb.amazonaws.com"):
-    raise SystemExit("Only local SeatLock or its EKS load balancer may be load-tested")
+local = host in {"localhost", "127.0.0.1", "backend"}
+if not (local or host.endswith(".elb.amazonaws.com") or args.own_deployment):
+    raise SystemExit("Only local SeatLock, its EKS load balancer, or --own-deployment targets may be load-tested")
 if not 1 <= args.seconds <= 120 or not 1 <= args.workers <= 16:
     raise SystemExit("Bounded load: 1–120 seconds, 1–16 workers")
 deadline = time.monotonic() + args.seconds

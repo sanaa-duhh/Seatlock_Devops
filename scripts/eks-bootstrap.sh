@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # One-time platform setup on a fresh EKS cluster created by terraform/.
-# Installs the Ingress controller and monitoring, creates the app Secret, and
-# hands the deploy settings to GitHub so the CI deploy job can take over.
+# Installs the Ingress controller and monitoring, creates the app Secret, and prints
+# the GitHub settings the CI deploy job needs.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-region="$(terraform -chdir=terraform output -raw region)"
-cluster="$(terraform -chdir=terraform output -raw cluster_name)"
-role_arn="$(terraform -chdir=terraform output -raw github_deploy_role_arn)"
+tf() { terraform -chdir=terraform output -raw "$1"; }
+region="$(tf region)"
+cluster="$(tf cluster_name)"
+mode="$(tf ingress_mode)"
+auth="$(tf github_deploy_auth)"
 
 aws eks update-kubeconfig --region "$region" --name "$cluster"
 context="$(kubectl config current-context)"
@@ -41,38 +43,57 @@ apply({'apiVersion': 'v1', 'kind': 'ConfigMap',
                 'seatlock-logs.json': Path('monitoring/logs-dashboard.json').read_text()}})
 PY
 
-echo "==> Helm charts: kube-prometheus-stack and Traefik"
+echo "==> Helm charts: kube-prometheus-stack and Traefik ($mode mode)"
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null
 helm repo add traefik https://traefik.github.io/charts >/dev/null
 helm repo update prometheus-community traefik >/dev/null
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack --version 92.1.0 \
   -n seatlock-monitoring -f monitoring/kube-prometheus-values.yaml --wait --timeout 10m
+traefik_values="k8s/traefik-values-eks.yaml"
+[[ "$mode" == hostport ]] && traefik_values="k8s/traefik-values-eks-hostport.yaml"
 helm upgrade --install traefik traefik/traefik --version 41.6.1 \
-  -n ingress --create-namespace -f k8s/traefik-values-eks.yaml --wait --timeout 5m
+  -n ingress --create-namespace -f "$traefik_values" --wait --timeout 5m
 
 echo "==> Loki and Alloy for request logs"
 kubectl apply -f monitoring/logs.yaml
 
-echo "==> Waiting for the Network Load Balancer hostname"
+echo "==> Public address of the app"
 host=""
 for _ in $(seq 1 60); do
-  host="$(kubectl -n ingress get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+  if [[ "$mode" == hostport ]]; then
+    host="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')"
+  else
+    host="$(kubectl -n ingress get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+  fi
   [[ -n "$host" ]] && break
   sleep 5
 done
-[[ -n "$host" ]] || { echo "Load balancer hostname not assigned yet; rerun later." >&2; exit 1; }
-
-echo "==> GitHub variables for the deploy job (the production environment scopes the OIDC trust)"
-repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
-gh api -X PUT "repos/$repo/environments/production" >/dev/null
-gh variable set AWS_REGION --body "$region"
-gh variable set EKS_CLUSTER_NAME --body "$cluster"
-gh variable set AWS_DEPLOY_ROLE_ARN --body "$role_arn"
-gh variable set APP_HOSTNAME --body "$host"
+[[ -n "$host" ]] || { echo "No public address yet; rerun this script in a minute." >&2; exit 1; }
 
 cat <<EOF
 
-Platform ready.
-  App URL (after the first deploy): http://$host
-  Next: gh workflow run ci.yml --ref main   (or push a commit)
+Platform ready. App URL after the first deploy: http://$host
+
+Add these in GitHub -> repository Settings -> Secrets and variables -> Actions:
+
+  Variables tab
+    EKS_CLUSTER_NAME = $cluster
+    AWS_REGION       = $region
+    APP_HOSTNAME     = $host
+EOF
+if [[ "$auth" == oidc ]]; then
+  cat <<EOF
+    AWS_DEPLOY_ROLE_ARN = $(tf github_deploy_role_arn)
+EOF
+else
+  cat <<'EOF'
+
+  Secrets tab (copy each value from the command shown; never paste it into chat):
+    AWS_ACCESS_KEY_ID     <- terraform -chdir=terraform output -raw github_deploy_access_key_id | pbcopy
+    AWS_SECRET_ACCESS_KEY <- terraform -chdir=terraform output -raw github_deploy_secret_access_key | pbcopy
+EOF
+fi
+cat <<'EOF'
+
+Then trigger a deploy: Actions -> CI/CD -> Run workflow (main), or push a commit.
 EOF
