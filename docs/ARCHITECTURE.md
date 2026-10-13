@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    User[Browser] -->|HTTP| LB[AWS NLB]
+    User[Browser] -->|HTTP| LB[AWS NLB<br/>or node port 80]
     LB --> Traefik[Traefik Ingress]
     Traefik -->|/| FE[frontend x2<br/>Nginx + React]
     Traefik -->|/api| BE[backend x2-5<br/>FastAPI, HPA]
@@ -15,8 +15,9 @@ flowchart LR
     Alloy -->|pod logs| Loki --> Graf
 ```
 
-Everything inside the cluster runs in private subnets. Only the load balancer sits in the
-public subnets. One release of the Helm chart owns the application; the Ingress controller
+In the default `nlb` mode the nodes run in private subnets and only the load balancer sits
+in the public subnets. In `hostport` mode (for accounts without load balancers, and for the
+cheapest demo) the nodes sit in public subnets and Traefik answers on port 80 of each node. One release of the Helm chart owns the application; the Ingress controller
 and monitoring stack are separate platform releases installed once by `scripts/eks-bootstrap.sh`.
 
 ## Booking correctness
@@ -58,7 +59,7 @@ flowchart LR
     T & F --> E[Playwright on Compose]
     B & E --> K[kind cluster: helm install + Playwright]
     K --> P[push to GHCR :SHA]
-    P --> D[EKS: OIDC role, helm upgrade,<br/>rollback on failure, smoke test]
+    P --> D[EKS: scoped deploy identity, helm upgrade,<br/>rollback on failure, smoke test]
 ```
 
 - **Build once, promote the same bytes.** Each image is built a single time, scanned, saved as
@@ -66,10 +67,12 @@ flowchart LR
   that passed every gate, never a rebuild.
 - **Commit SHA tags only.** `ghcr.io/<owner>/seatlock-backend:<sha>` maps any running Pod back
   to its source commit. There is no `latest` tag to drift.
-- **No long-lived cloud credentials.** The deploy job exchanges GitHub's OIDC token for a
-  one-hour AWS role session. The IAM trust policy accepts only this repository's
-  `production` environment, and the EKS access entry limits that role to the `seatlock`
-  namespace.
+- **Least-privilege cloud access.** By default the deploy job exchanges GitHub's OIDC token
+  for a one-hour AWS role session, and the IAM trust policy accepts only this repository's
+  `production` environment. If an account's policies forbid OIDC providers,
+  `github_deploy_auth = "access_key"` creates a deploy-only IAM user instead; its key exists
+  only as long as the cluster. Either identity can only call `eks:DescribeCluster`, and its
+  EKS access entry limits it to the `seatlock` namespace.
 - **Safe rollout.** `helm upgrade --rollback-on-failure --wait --wait-for-jobs` waits for the
   migration Job and ready Pods, and reverts to the previous release automatically if they
   never become healthy. A smoke test then checks the public URL and the running image tag.
@@ -81,14 +84,14 @@ flowchart LR
 
 | Resource | Choice | Why |
 |---|---|---|
-| VPC | `10.42.0.0/16`, 2 AZs, 2 public + 2 private subnets | Nodes stay private; load balancers get public subnets via the `kubernetes.io/role/elb` tag |
-| NAT | One shared NAT gateway | Lowest cost for a demo; production would run one per AZ |
+| VPC | `10.42.0.0/16`, 2 AZs, 2 public + 2 private subnets | `nlb` mode keeps nodes private and lets load balancers use the public subnets (`kubernetes.io/role/elb` tag) |
+| NAT | One shared NAT gateway in `nlb` mode, none in `hostport` mode | Lowest cost for a demo; production would run one per AZ |
 | EKS | Managed control plane, API-mode access entries | No `aws-auth` ConfigMap to hand-edit; access is declared in Terraform |
 | Nodes | Managed node group, 2 × t3.medium (1 to 3) | Fits app, Ingress and monitoring with headroom |
-| Add-ons | CoreDNS, kube-proxy, VPC CNI, metrics-server, Pod Identity, EBS CSI (IRSA) | metrics-server feeds the HPA; EBS CSI provisions encrypted gp3 volumes |
-| IAM | GitHub OIDC provider + deploy role | Keyless CI deployments |
+| Add-ons | CoreDNS, kube-proxy, VPC CNI, metrics-server, Pod Identity agent, EBS CSI | metrics-server feeds the HPA; EBS CSI provisions encrypted gp3 volumes and gets AWS permissions through EKS Pod Identity, so no IAM OIDC provider is needed |
+| IAM | GitHub OIDC provider + deploy role (or a deploy-only user) | CI deploys scoped to one cluster and one namespace |
 
-Kubernetes itself creates two AWS resources Terraform does not track: the NLB for the Ingress
+Kubernetes itself creates AWS resources Terraform does not track: the NLB for the Ingress (in `nlb` mode)
 Service and EBS volumes for PVCs. `scripts/eks-teardown.sh` deletes them through Kubernetes
 first, waits for the load balancer to disappear, then runs `terraform destroy` and checks
 for leftover volumes. Without this order, VPC deletion stalls and orphaned disks keep billing.
@@ -111,11 +114,11 @@ Traefik implements Ingress: on minikube it uses a dedicated IngressClass behind 
 | Images | Trivy, fail on any HIGH or CRITICAL (fixed or unfixed); Alpine bases with `apk upgrade` |
 | IaC | Trivy misconfiguration scan of Terraform, Helm and Dockerfiles; accepted findings justified in `.trivyignore` |
 | Runtime | Non-root UIDs, read-only root filesystem, all capabilities dropped, no privilege escalation, no service-account token mounts |
-| Cloud access | OIDC role scoped to one repo environment and one namespace |
+| Cloud access | OIDC role (or deploy-only user) limited to `eks:DescribeCluster` and one namespace |
 | App | HttpOnly SameSite session cookie (hash stored server-side), custom-header + Origin check on mutations, separate organizer token |
 
 Known limits, deliberately out of scope for a demo: guest sessions instead of accounts, no
-payments, plain HTTP on the load balancer hostname (TLS would need a domain and ACM or
+payments, plain HTTP on the load balancer hostname or node IP (TLS would need a domain and ACM or
 cert-manager), a single-instance PostgreSQL where production would use Amazon RDS Multi-AZ,
 and Kubernetes Secrets created from a local file where production would use AWS Secrets
 Manager with the External Secrets Operator.

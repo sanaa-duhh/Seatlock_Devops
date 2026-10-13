@@ -3,7 +3,7 @@
 **An event-ticketing app where two people can never book the same seat, shipped through a
 production-style DevOps platform:** tested and security-scanned in GitHub Actions, packaged
 as SHA-tagged images in GHCR, provisioned on AWS EKS with Terraform, deployed with Helm
-through keyless OIDC, and observed with Prometheus, Grafana and Loki.
+by a namespace-scoped CI identity, and observed with Prometheus, Grafana and Loki.
 
 [![CI/CD](https://github.com/OWNER/seatlock/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/seatlock/actions/workflows/ci.yml)
 
@@ -21,9 +21,11 @@ through keyless OIDC, and observed with Prometheus, Grafana and Loki.
 - **Build once, deploy the same bytes.** Each image is built once, tagged with the commit
   SHA, scanned, tested in Kubernetes, then pushed to GHCR and deployed. Every running Pod
   traces back to the commit it came from, and the UI shows that commit.
-- **Keyless, least-privilege deploys.** GitHub Actions assumes a one-hour AWS role through
-  OIDC. The role is trusted only for this repo's `production` environment and can only
-  touch the `seatlock` namespace. No AWS keys are stored anywhere.
+- **Least-privilege deploys.** By default GitHub Actions assumes a one-hour AWS role through
+  OIDC, trusted only for this repo's `production` environment, so no AWS keys are stored.
+  The CI identity can only describe the cluster and touch the `seatlock` namespace. For
+  AWS accounts whose policies forbid OIDC providers, one Terraform variable switches to a
+  deploy-only IAM user whose key is destroyed with the cluster.
 - **Hardened runtime.** Non-root containers, read-only root filesystems, all capabilities
   dropped, and startup, liveness and readiness probes with distinct meanings. A failed
   rollout reverts itself (`helm upgrade --rollback-on-failure`).
@@ -41,17 +43,17 @@ flowchart LR
     Dev[Developer] -->|git push| GH[GitHub]
     GH --> CI[GitHub Actions<br/>test · scan · kind deploy]
     CI -->|SHA-tagged images| GHCR[(GHCR)]
-    CI -->|OIDC role, helm upgrade| EKS
+    CI -->|scoped deploy identity, helm upgrade| EKS
     TF[Terraform] -->|VPC, EKS, IAM| AWS
-    subgraph AWS [AWS ap-south-1]
-      subgraph EKS [EKS cluster, private subnets]
+    subgraph AWS [AWS ap-southeast-2]
+      subgraph EKS [EKS cluster]
         Ingress[Traefik Ingress] -->|/| FE[frontend x2]
         Ingress -->|/api| BE[backend x2-5 HPA]
         BE --> PG[(PostgreSQL<br/>gp3 volume)]
         Prom[Prometheus] --> BE
         Prom --> Graf[Grafana]
       end
-      NLB[Network Load Balancer] --> Ingress
+      NLB[NLB, or node port 80] --> Ingress
     end
     GHCR -.->|pull| EKS
     User[Browser] --> NLB
@@ -70,7 +72,7 @@ Design decisions and the booking state machine are in
 | Containers | Docker multi-stage builds, Docker Compose |
 | CI/CD | GitHub Actions, GHCR, Dependabot |
 | Security | Trivy (images + IaC), Gitleaks, Bandit, pip-audit, npm audit |
-| Infrastructure | Terraform (terraform-aws-modules VPC + EKS), AWS EKS, EBS CSI, IAM OIDC |
+| Infrastructure | Terraform (terraform-aws-modules VPC + EKS), AWS EKS, EBS CSI, EKS Pod Identity, IAM OIDC |
 | Kubernetes | Helm, Traefik Ingress, HPA + metrics-server, StatefulSet + PVC |
 | Observability | kube-prometheus-stack (Prometheus, Grafana, Alertmanager), Loki, Grafana Alloy |
 
@@ -81,7 +83,7 @@ backend/            FastAPI app, Alembic migrations, pytest suite, Dockerfile
 frontend/           React app, Playwright tests, Nginx config, Dockerfile
 docker-compose.yml  Local stack: postgres → migrate → backend → frontend
 .github/workflows/  CI/CD pipeline
-terraform/          AWS VPC, EKS, node group, add-ons, GitHub OIDC deploy role
+terraform/          AWS VPC, EKS, node group, add-ons, GitHub deploy identity
 k8s/                Namespace, EKS StorageClass, Ingress controller values
 helm/seatlock/      Application chart (values.yaml local, values-eks.yaml cloud)
 monitoring/         Prometheus/Grafana values, dashboards, alerts, Loki/Alloy
@@ -185,20 +187,39 @@ kubectl -n seatlock get pods,svc,hpa,ingress
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars   # set github_repository
 make tf-plan       # terraform init + plan
 make eks-up        # apply (~15 min), then scripts/eks-bootstrap.sh
-gh workflow run ci.yml --ref main                                   # first deploy via CI
+#                    add the printed variables/secrets in GitHub, then:
+#                    Actions -> CI/CD -> Run workflow   (first deploy)
 make eks-down      # delete LB + volumes, terraform destroy, check for leftovers
 ```
 
-Terraform creates a VPC with two public and two private subnets across two AZs, a NAT
-gateway, an EKS cluster with a managed node group (2 × t3.medium), the metrics-server,
-EBS CSI and Pod Identity add-ons, and the GitHub OIDC deploy role. `eks-bootstrap.sh`
-installs Traefik behind an AWS Network Load Balancer, kube-prometheus-stack and Loki,
-creates the app Secret, and sets the repository variables the deploy job reads.
+Terraform creates:
 
-**Cost:** roughly $0.30 per hour in ap-south-1 (EKS control plane, two nodes, NAT gateway,
-NLB, public IPv4). A full demo session costs about a dollar. `make eks-down` removes the
-Kubernetes-created load balancer and EBS volumes *before* `terraform destroy`, so the VPC
-deletion does not stall and no orphaned disks keep billing.
+- a VPC with two public and two private subnets across two AZs
+- an EKS 1.37 cluster with a managed node group (2 × t3.medium)
+- the CoreDNS, kube-proxy, VPC CNI, metrics-server and Pod Identity add-ons
+- the EBS CSI driver, which gets its AWS permissions through EKS Pod Identity rather than
+  an IAM OIDC provider
+- the GitHub deploy identity
+
+`eks-bootstrap.sh` then installs Traefik, kube-prometheus-stack and Loki, creates the app
+Secret, and prints the GitHub settings the deploy job needs.
+
+Two settings adapt the same code to what an AWS account allows:
+
+| Variable | Default | Alternative |
+|---|---|---|
+| `ingress_mode` | `nlb`: private nodes, NAT gateway, Traefik behind an AWS Network Load Balancer (about $0.31/h in Sydney) | `hostport`: nodes in public subnets, Traefik on port 80 of each node, no NAT or LB (about $0.22/h) |
+| `github_deploy_auth` | `oidc`: keyless, short-lived role sessions | `access_key`: deploy-only IAM user, key stored as GitHub secrets, destroyed with the cluster |
+
+The recorded demo ran in an AWS account whose organization policies allow a single region
+(`ap-southeast-2`) and forbid IAM OIDC providers, and where load balancer creation was not
+yet enabled. It therefore used `hostport` and `access_key`; the probes that found these
+limits are described under *Lessons learned*.
+
+`make eks-down` removes any Kubernetes-created load balancer and the EBS volumes *before*
+`terraform destroy`, so the VPC deletion does not stall and no orphaned disks keep billing.
+It finishes by listing leftover clusters, volumes, load balancers, NAT gateways and
+Elastic IPs, all of which should be empty.
 
 ## Monitoring
 
@@ -244,6 +265,12 @@ python3 scripts/load.py --url http://<app-host>/api/events/1/seats --seconds 120
   Redeploying and re-running the browser tests is what proved the change safe.
 - **Terraform doesn't know what Kubernetes created.** Load balancers and volumes made by the
   cluster must be removed before `terraform destroy`, or teardown stalls and keeps billing.
+- **Every AWS account has its own guardrails.** The demo account's organization allowed one
+  region, denied IAM OIDC providers, and had load balancers disabled. Free probes found each
+  limit before anything was created: `--dry-run` calls, and deliberately invalid requests
+  whose error type shows whether the policy allows the action. The infrastructure was made
+  switchable (`ingress_mode`, `github_deploy_auth`, Pod Identity instead of IRSA) instead of
+  being rewritten for one account.
 - **Advertised capacity isn't real capacity.** minikube reported more memory than its Docker
   container actually had, which showed up as Grafana probe failures until the limits were
   measured and raised.

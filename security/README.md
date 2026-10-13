@@ -60,8 +60,9 @@ the Ingress.
 
 | ID | Finding | Why it is accepted |
 |---|---|---|
-| AWS-0040 / AWS-0041 | EKS API endpoint is public | GitHub-hosted runners have no fixed IPs. Every request is still IAM-authenticated, and the CI role is limited to one namespace. Narrow `cluster_endpoint_public_access_cidrs` for laptop-only use. |
-| AWS-0104 | Node security group allows all egress | Nodes must reach GHCR, ECR and AWS APIs through the NAT gateway. |
+| AWS-0040 / AWS-0041 | EKS API endpoint is public | GitHub-hosted runners have no fixed IPs. Every request is still IAM-authenticated, and the CI identity is limited to one namespace. Narrow `cluster_endpoint_public_access_cidrs` for laptop-only use. |
+| AWS-0104 | Node security group allows all egress | Nodes must reach GHCR, ECR and AWS APIs. |
+| AWS-0164 | Subnets assign public IPs (`hostport` mode only) | Lets Traefik answer on node port 80 without a load balancer. The node security group admits only port 80 plus EKS control-plane traffic. The default `nlb` mode keeps nodes private. |
 
 ## Reports in this folder
 
