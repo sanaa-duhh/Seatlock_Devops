@@ -13,13 +13,17 @@ spec:
     metadata:
       labels: {app: lab-api}
     spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 101, seccompProfile: {type: RuntimeDefault}}
       containers:
         - name: api
           image: nginxinc/nginx-unprivileged:stable-alpine
           ports: [{name: http, containerPort: 8080}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
           resources:
             requests: {cpu: 10m, memory: 16Mi}
             limits: {cpu: 100m, memory: 64Mi}
+      volumes: [{name: tmp, emptyDir: {}}]
 ---
 apiVersion: v1
 kind: Service

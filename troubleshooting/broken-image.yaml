@@ -14,10 +14,14 @@ spec:
     metadata:
       labels: {app: lab-web}
     spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 101, seccompProfile: {type: RuntimeDefault}}
       containers:
         - name: web
           image: nginxinc/nginx-unprivileged:1.99-does-not-exist # BUG: no such tag
           ports: [{containerPort: 8080}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
           resources:
             requests: {cpu: 10m, memory: 16Mi}
             limits: {cpu: 100m, memory: 64Mi}
+      volumes: [{name: tmp, emptyDir: {}}]

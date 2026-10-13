@@ -13,6 +13,7 @@ spec:
     metadata:
       labels: {app: lab-ready}
     spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 101, seccompProfile: {type: RuntimeDefault}}
       containers:
         - name: web
           image: nginxinc/nginx-unprivileged:stable-alpine
@@ -20,6 +21,9 @@ spec:
           readinessProbe:
             httpGet: {path: /healthz-typo, port: http} # BUG: nginx serves / not /healthz-typo
             periodSeconds: 5
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
           resources:
             requests: {cpu: 10m, memory: 16Mi}
             limits: {cpu: 100m, memory: 64Mi}
+      volumes: [{name: tmp, emptyDir: {}}]
