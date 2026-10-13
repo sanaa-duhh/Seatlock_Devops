@@ -1,0 +1,23 @@
+# EKS Ingress controller without a cloud load balancer (terraform ingress_mode = "hostport").
+# A DaemonSet puts one Traefik Pod on every public node, listening on node port 80.
+# Traefik itself stays unprivileged on container port 8000; the CNI maps 80 -> 8000.
+deployment:
+  kind: DaemonSet
+ports:
+  web:
+    hostPort: 80
+  websecure:
+    expose: {default: false}
+service:
+  spec:
+    type: ClusterIP
+ingressClass:
+  isDefaultClass: true
+  name: traefik
+providers:
+  kubernetesCRD: {enabled: false}
+  kubernetesIngress:
+    publishedService: {enabled: false}
+resources:
+  requests: {cpu: 50m, memory: 64Mi}
+  limits: {cpu: 500m, memory: 192Mi}

@@ -34,8 +34,9 @@ spec:
   {{- end }}
   rules:
     {{- range $hosts }}
-    - host: {{ . | quote }}
-      http:
+    {{- /* An empty host matches every hostname, e.g. when the app is reached by IP. */}}
+    - {{ if . }}host: {{ . | quote }}
+      {{ end }}http:
         paths:
           - path: /api
             pathType: Prefix

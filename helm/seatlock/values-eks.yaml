@@ -1,5 +1,5 @@
-# Overrides for the AWS EKS environment. CI sets the image tags (commit SHA),
-# the Ingress host (NLB hostname) and the allowed browser origin at deploy time.
+# Overrides for the AWS EKS environment. CI sets the image tags (commit SHA) and the
+# allowed browser origin (the app URL) at deploy time.
 backend:
   image: ghcr.io/OWNER/seatlock-backend
 frontend:
@@ -11,6 +11,7 @@ postgres:
 ingress:
   enabled: true
   className: traefik
+  host: "" # one app per cluster: accept any hostname (NLB name or node IP)
 monitoring:
   enabled: true
 hpa:
