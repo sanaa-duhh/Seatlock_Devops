@@ -283,15 +283,26 @@ jobs:
       url: http://${{ vars.APP_HOSTNAME }}
     permissions:
       contents: read
-      id-token: write # exchange the GitHub OIDC token for short-lived AWS credentials
+      id-token: write # lets the OIDC path exchange GitHub's token for AWS credentials
     env:
       HOST: ${{ vars.APP_HOSTNAME }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: {persist-credentials: false}
-      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      # Preferred: keyless OIDC role session. Fallback: a deploy-only IAM user's key, for
+      # accounts whose policies forbid OIDC providers (terraform github_deploy_auth).
+      - name: AWS credentials (OIDC role)
+        if: vars.AWS_DEPLOY_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: AWS credentials (deploy user)
+        if: vars.AWS_DEPLOY_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_REGION }}
       - name: Configure kubectl
         run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
@@ -304,7 +315,7 @@ jobs:
             --set backend.image="ghcr.io/$owner/seatlock-backend" \
             --set frontend.image="ghcr.io/$owner/seatlock-frontend" \
             --set-string backend.tag="$GITHUB_SHA" --set-string frontend.tag="$GITHUB_SHA" \
-            --set ingress.host="$HOST" --set-string config.allowedOrigins="http://$HOST" \
+            --set-string config.allowedOrigins="http://$HOST" \
             --rollback-on-failure --wait --wait-for-jobs --timeout 10m
       - name: Smoke test through the public Ingress
         run: |
