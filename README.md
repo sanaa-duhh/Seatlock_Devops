@@ -5,7 +5,7 @@ production-style DevOps platform:** tested and security-scanned in GitHub Action
 as SHA-tagged images in GHCR, provisioned on AWS EKS with Terraform, deployed with Helm
 by a namespace-scoped CI identity, and observed with Prometheus, Grafana and Loki.
 
-[![CI/CD](https://github.com/OWNER/seatlock/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/seatlock/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/sanaa-duhh/Seatlock_Devops/actions/workflows/ci.yml/badge.svg)](https://github.com/sanaa-duhh/Seatlock_Devops/actions/workflows/ci.yml)
 
 ![SeatLock running behind the Kubernetes Ingress](docs/screenshots/e2e/seatlock-ingress-desktop.png)
 
@@ -153,7 +153,7 @@ IaC + secret scan ────┘                                     ├─► 
 - A failing test or a HIGH/CRITICAL vulnerability stops the pipeline before anything is
   pushed.
 - Images are tagged only with the full commit SHA, for example
-  `ghcr.io/OWNER/seatlock-backend:<sha>`.
+  `ghcr.io/sanaa-duhh/seatlock-backend:<sha>`.
 - The deploy job runs `helm upgrade --rollback-on-failure`, then smoke-tests the public URL
   and checks that the running image tag matches the commit. It skips itself when no cluster
   exists, so the pipeline stays green between demos.

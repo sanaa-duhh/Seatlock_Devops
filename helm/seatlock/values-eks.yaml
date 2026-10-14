@@ -1,9 +1,9 @@
 # Overrides for the AWS EKS environment. CI sets the image tags (commit SHA) and the
 # allowed browser origin (the app URL) at deploy time.
 backend:
-  image: ghcr.io/OWNER/seatlock-backend
+  image: ghcr.io/sanaa-duhh/seatlock-backend
 frontend:
-  image: ghcr.io/OWNER/seatlock-frontend
+  image: ghcr.io/sanaa-duhh/seatlock-frontend
 imagePullPolicy: IfNotPresent # tags are immutable commit SHAs
 postgres:
   storageClass: seatlock-gp3
