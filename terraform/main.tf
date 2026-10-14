@@ -10,7 +10,7 @@ locals {
 # Network: two public subnets and two private subnets across two AZs.
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "5.8.1"
+  version = "6.7.3"
 
   name = var.cluster_name
   cidr = var.vpc_cidr
