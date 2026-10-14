@@ -1,0 +1,54 @@
+# GitOps for SeatLock: Argo CD keeps the `seatlock` namespace equal to helm/seatlock on main.
+# CI never deploys; it only commits new image tags to helm/seatlock/values-eks.yaml.
+# scripts/eks-bootstrap.sh replaces ${APP_ORIGIN} with the app's public URL and applies this.
+
+# A project that can only read this repository and only deploy into one namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: seatlock
+  namespace: argocd
+spec:
+  description: SeatLock application, one repository, one namespace
+  sourceRepos:
+    - https://github.com/sanaa-duhh/Seatlock_Devops.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: seatlock
+  clusterResourceWhitelist: [] # the chart creates no cluster-wide resources
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: seatlock
+  namespace: argocd
+  # Deleting the Application also deletes everything it deployed.
+  finalizers: [resources-finalizer.argocd.argoproj.io/foreground]
+spec:
+  project: seatlock
+  source:
+    repoURL: https://github.com/sanaa-duhh/Seatlock_Devops.git
+    targetRevision: main
+    path: helm/seatlock
+    helm:
+      releaseName: seatlock
+      valueFiles: [values-eks.yaml]
+      parameters:
+        - name: config.allowedOrigins
+          value: ${APP_ORIGIN}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: seatlock
+  syncPolicy:
+    automated:
+      prune: true # remove what was deleted from Git
+      selfHeal: true # revert manual changes in the cluster
+    retry:
+      limit: 5
+      backoff: {duration: 10s, factor: 2, maxDuration: 3m}
+  # The HPA owns the backend replica count, not Git.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: seatlock-backend
+      jsonPointers: [/spec/replicas]

@@ -1,0 +1,14 @@
+# Argo CD (argo/argo-cd chart) for the EKS demo: single replicas, no SSO, and the UI
+# reached with `kubectl -n argocd port-forward svc/argocd-server 8080:80`.
+configs:
+  params:
+    server.insecure: true # plain HTTP behind the port-forward; nothing is exposed publicly
+  cm:
+    timeout.reconciliation: 60s # check Git every minute so a new commit deploys quickly
+dex:
+  enabled: false
+notifications:
+  enabled: false
+server:
+  service:
+    type: ClusterIP

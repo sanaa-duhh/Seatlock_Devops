@@ -15,11 +15,13 @@ vpc="$(terraform -chdir=terraform output -raw vpc_id)"
 if aws eks describe-cluster --region "$region" --name "$cluster" >/dev/null 2>&1; then
   aws eks update-kubeconfig --region "$region" --name "$cluster" >/dev/null
   echo "==> Removing workloads that own AWS load balancers and volumes"
-  helm uninstall seatlock -n seatlock --wait 2>/dev/null || true
+  # Deleting the Argo CD Application (it has a finalizer) removes everything it deployed.
+  kubectl -n argocd delete application seatlock --wait=true --timeout=5m 2>/dev/null || true
+  helm uninstall argocd -n argocd --wait 2>/dev/null || true
   helm uninstall traefik -n ingress --wait 2>/dev/null || true
   kubectl delete -f monitoring/logs.yaml --ignore-not-found --wait=true || true
   helm uninstall monitoring -n seatlock-monitoring --wait 2>/dev/null || true
-  # StatefulSet volume claims survive helm uninstall by design; delete them explicitly.
+  # StatefulSet volume claims survive their StatefulSet by design; delete them explicitly.
   kubectl delete pvc --all -n seatlock --wait=true || true
   kubectl delete pvc --all -n seatlock-monitoring --wait=true || true
 
@@ -32,6 +34,9 @@ if aws eks describe-cluster --region "$region" --name "$cluster" >/dev/null 2>&1
   done
 fi
 
+echo "==> Disabling the CI rollout check (it skips while APP_HOSTNAME is unset)"
+gh variable delete APP_HOSTNAME 2>/dev/null || echo "   Delete the APP_HOSTNAME repository variable in GitHub, if set."
+
 echo "==> terraform destroy"
 terraform -chdir=terraform destroy -auto-approve
 
@@ -43,9 +48,3 @@ echo "Load balancers: $(aws elbv2 describe-load-balancers --region "$region" --q
 echo "NAT gateways:   $(aws ec2 describe-nat-gateways --region "$region" \
   --filter Name=state,Values=available,pending --query 'NatGateways[].NatGatewayId' --output text)"
 echo "Elastic IPs:    $(aws ec2 describe-addresses --region "$region" --query 'Addresses[].PublicIp' --output text)"
-
-cat <<'EOF'
-
-Finally, in GitHub -> Settings -> Secrets and variables -> Actions, delete the
-EKS_CLUSTER_NAME variable so the deploy job skips itself (and the AWS_* secrets, if set).
-EOF
