@@ -7,7 +7,7 @@ test('discover, filter and search real events', async ({ page }, testInfo) => {
   await expect(page.getByRole('heading', { name: 'Less scrolling. More living.' })).toBeVisible();
   await expect(page.locator('.event-card')).toHaveCount(4);
   await page.screenshot({
-    path: `../docs/screenshots/e2e/${prefix}-${testInfo.project.name}.png`,
+    path: `test-results/screenshots/${prefix}-${testInfo.project.name}.png`,
     fullPage: true,
   });
   await page.getByRole('button', { name: 'Comedy', exact: true }).click();
@@ -29,7 +29,7 @@ test('hold, reload, confirm, view and cancel a booking', async ({ page }, testIn
   await expect(page.getByRole('heading', { name: 'Pick your seats' })).toBeVisible();
   await page.locator('.seat.available').first().click();
   await page.screenshot({
-    path: `../docs/screenshots/e2e/${prefix}-seats-${testInfo.project.name}.png`,
+    path: `test-results/screenshots/${prefix}-seats-${testInfo.project.name}.png`,
     fullPage: true,
   });
   await page.getByRole('button', { name: 'Hold my seats' }).click();
@@ -40,7 +40,7 @@ test('hold, reload, confirm, view and cancel a booking', async ({ page }, testIn
   await expect(page.getByText('Your demo booking is confirmed. No payment was taken.')).toBeVisible();
   await expect(page.locator('.receipt')).toContainText('SL-');
   await page.screenshot({
-    path: `../docs/screenshots/e2e/${prefix}-confirmed-${testInfo.project.name}.png`,
+    path: `test-results/screenshots/${prefix}-confirmed-${testInfo.project.name}.png`,
     fullPage: true,
   });
   await page.getByRole('link', { name: 'View my tickets' }).click();

@@ -192,9 +192,7 @@ jobs:
         if: always()
         with:
           name: e2e-compose
-          path: |
-            docs/screenshots/e2e/
-            frontend/test-results/
+          path: frontend/test-results/
       - name: Stop stack
         if: always()
         run: docker compose down --volumes

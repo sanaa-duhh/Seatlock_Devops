@@ -7,7 +7,7 @@ through GitOps, and observed with Prometheus, Grafana and Loki.
 
 [![CI/CD](https://github.com/sanaa-duhh/Seatlock_Devops/actions/workflows/ci.yml/badge.svg)](https://github.com/sanaa-duhh/Seatlock_Devops/actions/workflows/ci.yml)
 
-![SeatLock running behind the Kubernetes Ingress](docs/screenshots/e2e/seatlock-ingress-desktop.png)
+![SeatLock running behind the Kubernetes Ingress](docs/screenshots/app/0-home-via-ingress.png)
 
 ## Highlights
 
@@ -33,6 +33,16 @@ through GitOps, and observed with Prometheus, Grafana and Loki.
 - **Operability.** HPA scaling 2→4 under load, a Grafana dashboard of request rate, p95
   latency, errors and seat conflicts, request-ID logs in Loki, and fault-injection drills
   with recorded recoveries.
+
+## What it looks like
+
+| Browse events | Pick seats on the map |
+|---|---|
+| ![Event discovery page with four events and category filters](docs/screenshots/app/1-discover.png) | ![Seat map with three seats selected and the running total](docs/screenshots/app/2-seat-map.png) |
+| **Seats held for five minutes** (live countdown, survives a reload) | **Booking confirmed** with a ticket reference |
+| ![Seats held with a 4:59 countdown and a Confirm button](docs/screenshots/app/3-seats-held.png) | ![Confirmed demo ticket with booking reference and barcode](docs/screenshots/app/4-confirmed.png) |
+| **REST API** (Swagger at `/docs`) | **Responsive** on mobile |
+| ![Swagger UI listing the GET, POST, PUT and DELETE endpoints](docs/screenshots/app/6-api-docs.png) | ![SeatLock home page on a phone-sized screen](docs/screenshots/app/7-mobile.png) |
 
 ## Architecture
 
@@ -131,7 +141,7 @@ Run `make help` for every shortcut.
 ## Testing
 
 ```bash
-make test        # 28 pytest tests against a throwaway PostgreSQL, 88% coverage
+make test        # 29 pytest tests against a throwaway PostgreSQL, 88% coverage
 make lint        # ruff, bandit, prettier, terraform fmt, helm lint
 make e2e         # Playwright booking journey on desktop and mobile (stack must be up)
 make scan        # Trivy image + IaC scan, same policy as CI
@@ -311,8 +321,8 @@ python3 scripts/load.py --url http://<app-host>/api/events/1/seats --seconds 120
 
 | Module | Evidence in this repo |
 |---|---|
-| M1 Application | `backend/app/`, `backend/alembic/versions/0001_seatlock.py`, `backend/requirements.txt`, `frontend/`, `docker-compose.yml`, [screenshots](docs/screenshots/e2e/) |
-| M2 Testing | `backend/tests/` (28 tests across 10+ endpoints), `backend/pytest.ini`, `backend/tests/conftest.py` (isolated test DB) |
+| M1 Application | `backend/app/`, `backend/alembic/versions/0001_seatlock.py`, `backend/requirements.txt`, `frontend/`, `docker-compose.yml`, [screenshots](docs/screenshots/app/) |
+| M2 Testing | `backend/tests/` (29 tests across 14 endpoints), `backend/pytest.ini`, `backend/tests/conftest.py` (isolated test DB) |
 | M3 Git/GitHub | this repository, its commit history, `.gitignore` |
 | M4 Docker | `backend/Dockerfile`, `frontend/Dockerfile` (Node build → Nginx), non-root users, `docker-compose.yml` on http://localhost:3000 |
 | M5 CI/CD | `.github/workflows/ci.yml`: push to `main`, pytest gate, frontend build, both images, GHCR push, SHA tags |
