@@ -2,8 +2,8 @@
 
 **An event-ticketing app where two people can never book the same seat, shipped through a
 production-style DevOps platform:** tested and security-scanned in GitHub Actions, packaged
-as SHA-tagged images in GHCR, provisioned on AWS EKS with Terraform, deployed with Helm
-by a namespace-scoped CI identity, and observed with Prometheus, Grafana and Loki.
+as SHA-tagged images in GHCR, provisioned on AWS EKS with Terraform, deployed by Argo CD
+through GitOps, and observed with Prometheus, Grafana and Loki.
 
 [![CI/CD](https://github.com/sanaa-duhh/Seatlock_Devops/actions/workflows/ci.yml/badge.svg)](https://github.com/sanaa-duhh/Seatlock_Devops/actions/workflows/ci.yml)
 
@@ -21,14 +21,12 @@ by a namespace-scoped CI identity, and observed with Prometheus, Grafana and Lok
 - **Build once, deploy the same bytes.** Each image is built once, tagged with the commit
   SHA, scanned, tested in Kubernetes, then pushed to GHCR and deployed. Every running Pod
   traces back to the commit it came from, and the UI shows that commit.
-- **Least-privilege deploys.** By default GitHub Actions assumes a one-hour AWS role through
-  OIDC, trusted only for this repo's `production` environment, so no AWS keys are stored.
-  The CI identity can only describe the cluster and touch the `seatlock` namespace. For
-  AWS accounts whose policies forbid OIDC providers, one Terraform variable switches to a
-  deploy-only IAM user whose key is destroyed with the cluster.
+- **GitOps with Argo CD.** CI never deploys and holds no cloud credentials. It commits the
+  new image tag to Git; Argo CD in the cluster pulls the change, syncs it in order
+  (database, then migrations, then the app) and reverts manual drift. Rollback is a
+  `git revert`.
 - **Hardened runtime.** Non-root containers, read-only root filesystems, all capabilities
-  dropped, and startup, liveness and readiness probes with distinct meanings. A failed
-  rollout reverts itself (`helm upgrade --rollback-on-failure`).
+  dropped, and startup, liveness and readiness probes with distinct meanings.
 - **Real findings, fixed.** Scanning found 46 HIGH CVEs in the original backend image and a
   libtiff CVE hidden by a stale build cache. Both were fixed without suppressions; see
   [security/README.md](security/README.md).
@@ -40,23 +38,25 @@ by a namespace-scoped CI identity, and observed with Prometheus, Grafana and Lok
 
 ```mermaid
 flowchart LR
-    Dev[Developer] -->|git push| GH[GitHub]
-    GH --> CI[GitHub Actions<br/>test · scan · kind deploy]
+    Dev[Developer] -->|git push| CI[GitHub Actions<br/>test · scan · kind deploy]
     CI -->|SHA-tagged images| GHCR[(GHCR)]
-    CI -->|scoped deploy identity, helm upgrade| EKS
+    CI -->|commit image tag| Git[(Git<br/>values-eks.yaml)]
     TF[Terraform] -->|VPC, EKS, IAM| AWS
     subgraph AWS [AWS ap-southeast-2]
       subgraph EKS [EKS cluster]
-        Ingress[Traefik Ingress] -->|/| FE[frontend x2]
-        Ingress -->|/api| BE[backend x2-5 HPA]
+        Argo[Argo CD] -->|sync| FE[frontend x2]
+        Argo -->|sync| BE[backend x2-5 HPA]
+        Ingress[Traefik Ingress] -->|/| FE
+        Ingress -->|/api| BE
         BE --> PG[(PostgreSQL<br/>gp3 volume)]
-        Prom[Prometheus] --> BE
+        Prom[Prometheus] -->|scrape| BE
         Prom --> Graf[Grafana]
       end
-      NLB[NLB, or node port 80] --> Ingress
+      Edge[NLB, or node port 80] --> Ingress
     end
-    GHCR -.->|pull| EKS
-    User[Browser] --> NLB
+    Argo -.->|pull desired state| Git
+    EKS -.->|pull images| GHCR
+    User[Browser] --> Edge
 ```
 
 Design decisions and the booking state machine are in
@@ -72,8 +72,8 @@ Design decisions and the booking state machine are in
 | Containers | Docker multi-stage builds, Docker Compose |
 | CI/CD | GitHub Actions, GHCR, Dependabot |
 | Security | Trivy (images + IaC), Gitleaks, Bandit, pip-audit, npm audit |
-| Infrastructure | Terraform (terraform-aws-modules VPC + EKS), AWS EKS, EBS CSI, EKS Pod Identity, IAM OIDC |
-| Kubernetes | Helm, Traefik Ingress, HPA + metrics-server, StatefulSet + PVC |
+| Infrastructure | Terraform (terraform-aws-modules VPC + EKS), AWS EKS, EBS CSI, EKS Pod Identity |
+| Kubernetes | Helm, Argo CD (GitOps), Traefik Ingress, HPA + metrics-server, StatefulSet + PVC |
 | Observability | kube-prometheus-stack (Prometheus, Grafana, Alertmanager), Loki, Grafana Alloy |
 
 ## Repository layout
@@ -83,14 +83,16 @@ backend/            FastAPI app, Alembic migrations, pytest suite, Dockerfile
 frontend/           React app, Playwright tests, Nginx config, Dockerfile
 docker-compose.yml  Local stack: postgres → migrate → backend → frontend
 .github/workflows/  CI/CD pipeline
-terraform/          AWS VPC, EKS, node group, add-ons, GitHub deploy identity
-k8s/                Namespace, EKS StorageClass, Ingress controller values
+terraform/          AWS VPC, EKS, node group, add-ons
+gitops/             Argo CD AppProject and Application
+k8s/                Namespace, EKS StorageClass, Traefik and Argo CD values
 helm/seatlock/      Application chart (values.yaml local, values-eks.yaml cloud)
 monitoring/         Prometheus/Grafana values, dashboards, alerts, Loki/Alloy
 troubleshooting/    Deliberately broken manifests with diagnosis guides
 scripts/            EKS bootstrap/teardown, load, drills, backup/restore
 security/           Gate policy, findings and scan reports
 docs/               Architecture, drill records, screenshots
+demo/               Presentation slides (PPTX, PDF) and the demo video
 ```
 
 ## Quick start (local)
@@ -146,17 +148,19 @@ push to `main`:
 ```text
 backend tests + SAST ─┐
 frontend build ───────┼─► build + Trivy-scan images (:SHA) ─┐
-IaC + secret scan ────┘                                     ├─► Helm on kind + Playwright ─► push to GHCR ─► deploy to EKS
-                         Playwright on Docker Compose ──────┘                                 (main only)     (main only)
+IaC + secret scan ────┘                                     ├─► Helm on kind + Playwright ─► push to GHCR ─► commit tag ─► verify rollout
+                         Playwright on Docker Compose ──────┘                                 (main only)     (main only)    (main only)
 ```
 
 - A failing test or a HIGH/CRITICAL vulnerability stops the pipeline before anything is
   pushed.
 - Images are tagged only with the full commit SHA, for example
   `ghcr.io/sanaa-duhh/seatlock-backend:<sha>`.
-- The deploy job runs `helm upgrade --rollback-on-failure`, then smoke-tests the public URL
-  and checks that the running image tag matches the commit. It skips itself when no cluster
-  exists, so the pipeline stays green between demos.
+- The `gitops` job rewrites both image tags in `helm/seatlock/values-eks.yaml` and commits
+  them (`[skip ci]`). Argo CD notices within a minute and rolls the new Pods out.
+- The `verify` job polls the public `/api/version` endpoint until it reports this commit,
+  so the run only goes green once the new version is actually serving. It skips itself
+  when no cluster exists.
 - Actions are pinned to commit SHAs; scanner images are pinned by digest.
 
 ## Kubernetes and Helm
@@ -181,15 +185,13 @@ bash scripts/local-platform.sh      # optional: Traefik, Prometheus/Grafana, Lok
 kubectl -n seatlock get pods,svc,hpa,ingress
 ```
 
-## AWS: Terraform, EKS and deployment
+## AWS: Terraform, EKS and GitOps
 
 ```bash
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars   # set github_repository
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 make tf-plan       # terraform init + plan
 make eks-up        # apply (~15 min), then scripts/eks-bootstrap.sh
-#                    add the printed variables/secrets in GitHub, then:
-#                    Actions -> CI/CD -> Run workflow   (first deploy)
-make eks-down      # delete LB + volumes, terraform destroy, check for leftovers
+make eks-down      # delete Argo CD apps, LB and volumes, terraform destroy, check for leftovers
 ```
 
 Terraform creates:
@@ -197,29 +199,33 @@ Terraform creates:
 - a VPC with two public and two private subnets across two AZs
 - an EKS 1.37 cluster with a managed node group (2 × t3.medium)
 - the CoreDNS, kube-proxy, VPC CNI, metrics-server and Pod Identity add-ons
-- the EBS CSI driver, which gets its AWS permissions through EKS Pod Identity rather than
-  an IAM OIDC provider
-- the GitHub deploy identity
+- the EBS CSI driver, which gets its AWS permissions through EKS Pod Identity
+- a KMS key that encrypts Kubernetes Secrets
 
-`eks-bootstrap.sh` then installs Traefik, kube-prometheus-stack and Loki, creates the app
-Secret, and prints the GitHub settings the deploy job needs.
+`eks-bootstrap.sh` installs Traefik, kube-prometheus-stack, Loki and Argo CD, creates the app
+Secret, and applies [`gitops/application.yaml`](gitops/application.yaml). From then on Argo CD
+deploys whatever `helm/seatlock/values-eks.yaml` on `main` says, and every pipeline run on
+`main` updates that file.
 
-Two settings adapt the same code to what an AWS account allows:
+**Argo CD:**
 
-| Variable | Default | Alternative |
+- The **AppProject** limits it to this one repository and the `seatlock` namespace.
+- The **Application** has automated sync, prune and self-heal turned on.
+- Sync waves order a rollout: database first, then the migration Job (a sync hook), then
+  the app.
+- The UI is at `kubectl -n argocd port-forward svc/argocd-server 8080:80`.
+
+`ingress_mode` adapts the same code to what an AWS account allows:
+
+| Mode | Layout | Approx. cost in Sydney |
 |---|---|---|
-| `ingress_mode` | `nlb`: private nodes, NAT gateway, Traefik behind an AWS Network Load Balancer (about $0.31/h in Sydney) | `hostport`: nodes in public subnets, Traefik on port 80 of each node, no NAT or LB (about $0.22/h) |
-| `github_deploy_auth` | `oidc`: keyless, short-lived role sessions | `access_key`: deploy-only IAM user, key stored as GitHub secrets, destroyed with the cluster |
+| `nlb` (default) | private nodes, NAT gateway, Traefik behind an AWS Network Load Balancer | about $0.31/h |
+| `hostport` | nodes in public subnets, Traefik on port 80 of each node, no NAT or LB | about $0.22/h |
 
-The recorded demo ran in an AWS account whose organization policies allow a single region
-(`ap-southeast-2`) and forbid IAM OIDC providers, and where load balancer creation was not
-yet enabled. It therefore used `hostport` and `access_key`; the probes that found these
-limits are described under *Lessons learned*.
-
-`make eks-down` removes any Kubernetes-created load balancer and the EBS volumes *before*
-`terraform destroy`, so the VPC deletion does not stall and no orphaned disks keep billing.
-It finishes by listing leftover clusters, volumes, load balancers, NAT gateways and
-Elastic IPs, all of which should be empty.
+`make eks-down` deletes the Argo CD Application (and with it everything it deployed), any
+Kubernetes-created load balancer and the EBS volumes *before* `terraform destroy`, so the
+VPC deletion does not stall and no orphaned disks keep billing. It then lists leftover
+clusters, volumes, load balancers, NAT gateways and Elastic IPs, which should all be empty.
 
 ## Monitoring
 
@@ -269,11 +275,34 @@ python3 scripts/load.py --url http://<app-host>/api/events/1/seats --seconds 120
   region, denied IAM OIDC providers, and had load balancers disabled. Free probes found each
   limit before anything was created: `--dry-run` calls, and deliberately invalid requests
   whose error type shows whether the policy allows the action. The infrastructure was made
-  switchable (`ingress_mode`, `github_deploy_auth`, Pod Identity instead of IRSA) instead of
-  being rewritten for one account.
+  switchable (`ingress_mode`, region, Pod Identity instead of IRSA) instead of being
+  rewritten for one account.
+- **Test the real network path.** nginx's resolver ignores DNS search domains, so the
+  short name `backend` worked in Docker Compose but not inside Kubernetes. Only the CI job
+  that installs the chart on a kind cluster caught it.
 - **Advertised capacity isn't real capacity.** minikube reported more memory than its Docker
   container actually had, which showed up as Grafana probe failures until the limits were
   measured and raised.
+
+## Known issues and limitations
+
+- **Demo scope.** Guest sessions instead of user accounts; checkout is simulated and takes
+  no payment; no emails or ticket transfers.
+- **Single PostgreSQL instance** in the cluster. A restart of its Pod is a short outage;
+  production would use Amazon RDS Multi-AZ with automated backups.
+- **Plain HTTP.** The app is served over HTTP on the load balancer hostname or node IP.
+  TLS needs a domain and a certificate (ACM or cert-manager); session cookies switch to
+  `Secure` once it is enabled.
+- **Secrets** are created from a local, git-ignored file by the bootstrap script.
+  Production would use AWS Secrets Manager with the External Secrets Operator.
+- **`hostport` mode** puts nodes in public subnets (only port 80 open) and uses one node's
+  IP as the app address. If that node is replaced, rerun the bootstrap to update it.
+- **The EKS API endpoint is public** (IAM-authenticated). Narrow
+  `cluster_endpoint_public_access_cidrs` to your own IP for anything long-lived.
+- **Terraform state is local** for this short-lived demo; a team would use an S3 backend
+  with state locking.
+- **Schema rollbacks.** A `git revert` rolls back the app, but database migrations only go
+  forward; a migration has to stay compatible with the previous app version.
 
 ## Capstone rubric map
 
@@ -289,8 +318,8 @@ python3 scripts/load.py --url http://<app-host>/api/events/1/seats --seconds 120
 | M5 CI/CD | `.github/workflows/ci.yml`: push to `main`, pytest gate, frontend build, both images, GHCR push, SHA tags |
 | M6 Trivy | `image` job in `ci.yml` (both images, `--exit-code 1` on HIGH/CRITICAL), [findings explained](security/README.md) |
 | M7 Terraform | `terraform/*.tf`, `terraform/terraform.tfvars.example`, `scripts/eks-teardown.sh` |
-| M8 Kubernetes/Helm | `k8s/namespace.yaml`, `helm/seatlock/` (Chart, values, templates), 2+ replicas, ClusterIP Services, Ingress `/` + `/api`, HPA |
+| M8 Kubernetes/Helm | `k8s/namespace.yaml`, `helm/seatlock/` (Chart, values, templates), 2+ replicas, ClusterIP Services, Ingress `/` + `/api`, HPA, Argo CD in `gitops/` |
 | M9 Observability | `/metrics`, `monitoring/kube-prometheus-values.yaml`, ServiceMonitor, `monitoring/dashboards/seatlock.json` |
-| M10 Docs/demo | this README; the live demo is a commit → pipeline → new SHA visible in the UI |
+| M10 Docs/demo | this README, `demo/` (slides and video); the demo is a commit → pipeline → Argo CD sync → new SHA live |
 
 </details>

@@ -59,7 +59,9 @@ flowchart LR
     T & F --> E[Playwright on Compose]
     B & E --> K[kind cluster: helm install + Playwright]
     K --> P[push to GHCR :SHA]
-    P --> D[EKS: scoped deploy identity, helm upgrade,<br/>rollback on failure, smoke test]
+    P --> G[commit image tag to Git]
+    G --> A[Argo CD syncs EKS]
+    A --> V[verify: /api/version = SHA]
 ```
 
 - **Build once, promote the same bytes.** Each image is built a single time, scanned, saved as
@@ -67,15 +69,15 @@ flowchart LR
   that passed every gate, never a rebuild.
 - **Commit SHA tags only.** `ghcr.io/<owner>/seatlock-backend:<sha>` maps any running Pod back
   to its source commit. There is no `latest` tag to drift.
-- **Least-privilege cloud access.** By default the deploy job exchanges GitHub's OIDC token
-  for a one-hour AWS role session, and the IAM trust policy accepts only this repository's
-  `production` environment. If an account's policies forbid OIDC providers,
-  `github_deploy_auth = "access_key"` creates a deploy-only IAM user instead; its key exists
-  only as long as the cluster. Either identity can only call `eks:DescribeCluster`, and its
-  EKS access entry limits it to the `seatlock` namespace.
-- **Safe rollout.** `helm upgrade --rollback-on-failure --wait --wait-for-jobs` waits for the
-  migration Job and ready Pods, and reverts to the previous release automatically if they
-  never become healthy. A smoke test then checks the public URL and the running image tag.
+- **GitOps: the cluster pulls, CI never pushes.** CI's last step commits the new image tag
+  to `helm/seatlock/values-eks.yaml`. Argo CD inside the cluster notices and syncs, so
+  GitHub holds no cloud credentials and no kubeconfig at all. The Argo CD AppProject may
+  only read this repository and only deploy into the `seatlock` namespace.
+- **Ordered, self-healing rollout.** Sync waves create the database first, then run the
+  Alembic migration Job as a sync hook, then roll out the app; Argo CD retries a failed sync
+  and reverts manual drift (self-heal). A final CI job polls the public `/api/version` until
+  it reports the new commit, so a green run means the version is live. Rollback is a
+  `git revert` of the tag commit.
 - **Pinned supply chain.** Every GitHub Action is pinned to a full commit SHA; Trivy and
   Gitleaks run from digest-pinned images; kind and Helm binaries are checksum-verified.
   Dependabot proposes updates, and each update goes through the full pipeline.
@@ -89,7 +91,7 @@ flowchart LR
 | EKS | Managed control plane, API-mode access entries | No `aws-auth` ConfigMap to hand-edit; access is declared in Terraform |
 | Nodes | Managed node group, 2 × t3.medium (1 to 3) | Fits app, Ingress and monitoring with headroom |
 | Add-ons | CoreDNS, kube-proxy, VPC CNI, metrics-server, Pod Identity agent, EBS CSI | metrics-server feeds the HPA; EBS CSI provisions encrypted gp3 volumes and gets AWS permissions through EKS Pod Identity, so no IAM OIDC provider is needed |
-| IAM | GitHub OIDC provider + deploy role (or a deploy-only user) | CI deploys scoped to one cluster and one namespace |
+| IAM | Cluster, node and EBS CSI roles only | CI needs no AWS identity, because Argo CD pulls deployments |
 
 Kubernetes itself creates AWS resources Terraform does not track: the NLB for the Ingress (in `nlb` mode)
 Service and EBS volumes for PVCs. `scripts/eks-teardown.sh` deletes them through Kubernetes
@@ -114,7 +116,7 @@ Traefik implements Ingress: on minikube it uses a dedicated IngressClass behind 
 | Images | Trivy, fail on any HIGH or CRITICAL (fixed or unfixed); Alpine bases with `apk upgrade` |
 | IaC | Trivy misconfiguration scan of Terraform, Helm and Dockerfiles; accepted findings justified in `.trivyignore` |
 | Runtime | Non-root UIDs, read-only root filesystem, all capabilities dropped, no privilege escalation, no service-account token mounts |
-| Cloud access | OIDC role (or deploy-only user) limited to `eks:DescribeCluster` and one namespace |
+| Cloud access | No cloud credentials in CI; Argo CD project limited to one repository and one namespace |
 | App | HttpOnly SameSite session cookie (hash stored server-side), custom-header + Origin check on mutations, separate organizer token |
 
 Known limits, deliberately out of scope for a demo: guest sessions instead of accounts, no
