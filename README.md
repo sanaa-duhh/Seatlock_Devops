@@ -294,9 +294,53 @@ python3 scripts/load.py --url http://<app-host>/api/events/1/seats --seconds 120
 - **Test the real network path.** nginx's resolver ignores DNS search domains, so the
   short name `backend` worked in Docker Compose but not inside Kubernetes. Only the CI job
   that installs the chart on a kind cluster caught it.
+- **Managed add-ons have their own requirements.** The first EKS run surfaced four issues that
+  no local cluster shows:
+  - The Pod Identity agent declares host port 80, so Traefik moved to 8080.
+  - The metrics-server add-on serves on 10251, which the default node security group
+    blocks, so the HPA had no CPU data until one rule was added.
+  - A host-port DaemonSet deadlocks on a surge rollout, so it needs `maxSurge: 0`.
+  - A t3.medium fits only 17 Pods, so the first scale-up stayed Pending until a third node
+    joined.
+
+  Each fix is in code, and the run's evidence shows the result.
 - **Advertised capacity isn't real capacity.** minikube reported more memory than its Docker
   container actually had, which showed up as Grafana probe failures until the limits were
   measured and raised.
+
+## Evidence from the EKS run
+
+Captured on 14 October 2026 from the real cluster in `ap-southeast-2`, then torn down.
+Raw command output is in [`docs/evidence/eks/`](docs/evidence/eks/).
+
+<p align="center">
+  <img src="docs/screenshots/eks/aws-console-vpc.png" width="49%" alt="AWS Console: VPC seatlock-demo, 10.42.0.0/16, Available">
+  <img src="docs/screenshots/eks/aws-console-eks.png" width="49%" alt="AWS Console: EKS cluster seatlock-demo, Active, Kubernetes 1.37">
+</p>
+<p align="center"><sub>AWS Console: the Terraform-created VPC and the EKS 1.37 cluster.</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/eks/argocd-app-tree.png" width="49%" alt="Argo CD application seatlock Synced and Healthy">
+  <img src="docs/screenshots/ci/github-actions-run.png" width="49%" alt="GitHub Actions run with all ten jobs green, including Verify the rollout on EKS">
+</p>
+<p align="center"><sub>Argo CD synced and healthy from Git, and a green pipeline that ends by verifying the new version is live on EKS.</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/eks/prometheus-targets.png" width="49%" alt="Prometheus targets: serviceMonitor seatlock 3 of 3 UP">
+  <img src="docs/screenshots/eks/grafana-dashboard.png" width="49%" alt="Grafana SeatLock dashboard with live request rate and latency">
+</p>
+<p align="center"><sub>Prometheus scraping all three backend Pods, and Grafana during a load test that scaled the HPA from 2 to 3 Pods.</sub></p>
+
+| Check | Evidence |
+|---|---|
+| `terraform plan` (60 resources) | [screenshot](docs/screenshots/eks/terraform-plan.png) · [full output](docs/evidence/terraform-plan.txt) |
+| Nodes, Pods, Services, Ingress, PVC | [nodes](docs/screenshots/eks/nodes.png) · [workloads](docs/screenshots/eks/workloads.png) |
+| `helm list` and the Argo CD application | [helm](docs/screenshots/eks/helm-list.png) · [argocd](docs/screenshots/eks/argocd-app.png) |
+| HPA scale-up event | [hpa](docs/screenshots/eks/hpa.png) |
+| `/metrics` endpoint | [metrics](docs/screenshots/eks/metrics-endpoint.png) |
+| Images in GHCR with commit-SHA tags | [package page](docs/screenshots/ci/ghcr-backend-package.png) |
+| App served through the Ingress on EKS | [app](docs/screenshots/eks/app-on-eks.png) |
+| `terraform destroy` and leftover check | [teardown](docs/screenshots/eks/terraform-destroy.png) |
 
 ## Known issues and limitations
 

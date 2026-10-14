@@ -1,0 +1,21 @@
+module.vpc.aws_internet_gateway.this[0] destroyed after 7m29s
+module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0] destroyed after 8m18s
+module.eks.aws_eks_cluster.this[0] destroyed after 2m42s
+module.vpc.aws_subnet.private[0] destroyed after 2s
+module.vpc.aws_subnet.private[1] destroyed after 2s
+module.vpc.aws_subnet.public[1] destroyed after 1s
+module.vpc.aws_subnet.public[0] destroyed after 1s
+module.vpc.aws_vpc.this[0] destroyed after 1s
+
+Destroy complete! Resources: 61 destroyed.
+
+--- leftover check (empty = nothing billing) ---
+EKS clusters:     
+EC2 instances:    
+EBS volumes:      
+Load balancers:   
+NAT gateways:     
+Elastic IPs:      
+VPCs (non-default): 
+EKS log groups:   
+KMS key (alias):  

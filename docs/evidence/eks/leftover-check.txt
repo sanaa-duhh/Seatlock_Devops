@@ -1,0 +1,9 @@
+EKS clusters:     
+EC2 instances:    
+EBS volumes:      
+Load balancers:   
+NAT gateways:     
+Elastic IPs:      
+VPCs (non-default): 
+EKS log groups:   
+KMS key (alias):  
