@@ -1,8 +1,8 @@
 # Accepted IaC findings. Each entry is a deliberate trade-off, reviewed and documented.
 
-# EKS API endpoint is public so GitHub-hosted runners (no fixed IPs) can deploy.
-# Every request is still authenticated with IAM, and the deploy role is limited
-# to one namespace. Narrow cluster_endpoint_public_access_cidrs for laptop-only use.
+# EKS API endpoint is public so the operator can administer from any network during a
+# short demo. Every request is still authenticated with IAM, and CI never calls the API
+# (Argo CD pulls from Git). Narrow cluster_endpoint_public_access_cidrs to your IP.
 AWS-0040
 AWS-0041
 

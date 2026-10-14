@@ -61,48 +61,10 @@ variable "ingress_allowed_cidrs" {
 variable "cluster_endpoint_public_access_cidrs" {
   description = <<-EOT
     CIDRs allowed to reach the public Kubernetes API. Every request still needs a valid
-    IAM identity. GitHub-hosted runners have no fixed IPs, so the CI deploy job needs
-    0.0.0.0/0 unless you run a self-hosted runner.
+    IAM identity. Narrow it to your own IP (x.x.x.x/32) when you administer from one place;
+    CI never calls the cluster, because Argo CD pulls deployments from Git.
   EOT
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
 
-variable "github_repository" {
-  description = "GitHub repository (owner/name) whose workflow may deploy to the cluster."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
-    error_message = "Use the owner/name form, for example octocat/seatlock."
-  }
-}
-
-variable "github_deploy_auth" {
-  description = <<-EOT
-    How GitHub Actions authenticates to AWS:
-      "oidc"       - short-lived role sessions through the GitHub OIDC provider (preferred).
-      "access_key" - a dedicated IAM user whose key is stored as GitHub secrets. Only for
-                     accounts whose policies forbid creating OIDC providers. The key is
-                     destroyed together with the cluster.
-  EOT
-  type        = string
-  default     = "oidc"
-
-  validation {
-    condition     = contains(["oidc", "access_key"], var.github_deploy_auth)
-    error_message = "github_deploy_auth must be \"oidc\" or \"access_key\"."
-  }
-}
-
-variable "create_github_oidc_provider" {
-  description = "With oidc auth: set false if this AWS account already has the GitHub Actions OIDC provider."
-  type        = bool
-  default     = true
-}
-
-variable "app_namespace" {
-  description = "Kubernetes namespace the CI deploy identity is limited to."
-  type        = string
-  default     = "seatlock"
-}

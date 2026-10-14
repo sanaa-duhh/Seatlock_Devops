@@ -81,22 +81,6 @@ module "eks" {
       cidr_blocks = var.ingress_allowed_cidrs
     }
   } : {}
-
-  # The GitHub Actions deploy identity may only manage resources inside the app namespace.
-  access_entries = {
-    github_deploy = {
-      principal_arn = local.github_deploy_principal_arn
-      policy_associations = {
-        namespace_admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type       = "namespace"
-            namespaces = [var.app_namespace]
-          }
-        }
-      }
-    }
-  }
 }
 
 # EBS CSI driver, so the PostgreSQL StatefulSet can claim encrypted gp3 volumes.
