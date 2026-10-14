@@ -36,13 +36,17 @@ through GitOps, and observed with Prometheus, Grafana and Loki.
 
 ## What it looks like
 
-| Browse events | Pick seats on the map |
-|---|---|
-| ![Event discovery page with four events and category filters](docs/screenshots/app/1-discover.png) | ![Seat map with three seats selected and the running total](docs/screenshots/app/2-seat-map.png) |
-| **Seats held for five minutes** (live countdown, survives a reload) | **Booking confirmed** with a ticket reference |
-| ![Seats held with a 4:59 countdown and a Confirm button](docs/screenshots/app/3-seats-held.png) | ![Confirmed demo ticket with booking reference and barcode](docs/screenshots/app/4-confirmed.png) |
-| **REST API** (Swagger at `/docs`) | **Responsive** on mobile |
-| ![Swagger UI listing the GET, POST, PUT and DELETE endpoints](docs/screenshots/app/6-api-docs.png) | ![SeatLock home page on a phone-sized screen](docs/screenshots/app/7-mobile.png) |
+<p align="center">
+  <img src="docs/screenshots/app/1-seat-map.png" width="49%" alt="Seat map with three seats selected and the running total">
+  <img src="docs/screenshots/app/2-seats-held.png" width="49%" alt="Seats held with a 4:59 countdown and a Confirm button">
+</p>
+<p align="center"><sub>Pick up to six seats, then they're held for five minutes with a live countdown.</sub></p>
+
+<p align="center">
+  <img src="docs/screenshots/app/3-confirmed.png" width="49%" alt="Confirmed demo ticket with booking reference and barcode">
+  <img src="docs/screenshots/app/4-api-docs.png" width="49%" alt="Swagger UI listing the GET, POST, PUT and DELETE endpoints">
+</p>
+<p align="center"><sub>A confirmed ticket, and the REST API documented in Swagger at <code>/docs</code>.</sub></p>
 
 ## Architecture
 
