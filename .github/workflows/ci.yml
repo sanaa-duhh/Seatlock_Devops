@@ -230,12 +230,14 @@ jobs:
             --set-string backend.tag="$GITHUB_SHA" --set-string frontend.tag="$GITHUB_SHA" \
             --set hpa.enabled=false --wait --wait-for-jobs --timeout 5m
           kubectl -n seatlock get pods,svc -o wide
-          kubectl -n seatlock port-forward svc/frontend 3000:80 > /dev/null 2>&1 &
       - name: Booking lifecycle through the cluster (Playwright)
         working-directory: frontend
         run: |
           npm ci
           npx playwright install --with-deps chromium
+          # Background processes do not survive between steps, so forward in this one.
+          kubectl -n seatlock port-forward svc/frontend 3000:80 > port-forward.log 2>&1 &
+          for _ in $(seq 1 30); do curl -fsS http://localhost:3000/api/events > /dev/null && break; sleep 2; done
           PLAYWRIGHT_CHANNEL=chromium EVIDENCE_PREFIX=kind npm run test:e2e
       - name: Cluster diagnostics
         if: failure()
