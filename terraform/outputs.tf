@@ -14,6 +14,10 @@ output "ingress_mode" {
   value = var.ingress_mode
 }
 
+output "ingress_host_port" {
+  value = var.ingress_host_port
+}
+
 output "vpc_id" {
   value = module.vpc.vpc_id
 }

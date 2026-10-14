@@ -63,7 +63,8 @@ echo "==> Public address of the app"
 host=""
 for _ in $(seq 1 60); do
   if [[ "$mode" == hostport ]]; then
-    host="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')"
+    ip="$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')"
+    [[ -n "$ip" ]] && host="$ip:$(tf ingress_host_port)"
   else
     host="$(kubectl -n ingress get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
   fi
@@ -71,6 +72,13 @@ for _ in $(seq 1 60); do
   sleep 5
 done
 [[ -n "$host" ]] || { echo "No public address yet; rerun this script in a minute." >&2; exit 1; }
+
+if [[ "$mode" == hostport ]]; then
+  # Without a load balancer nothing reports an Ingress address, and Argo CD would keep
+  # the Ingress "Progressing". Have Traefik publish the node IP instead.
+  helm upgrade traefik traefik/traefik --version 41.6.1 -n ingress --reuse-values \
+    --set providers.kubernetesIngress.ingressEndpoint.ip="$ip" --wait --timeout 5m
+fi
 
 echo "==> Handing the app to Argo CD (allowed origin http://$host)"
 sed "s#\${APP_ORIGIN}#http://$host#" gitops/application.yaml | kubectl apply -f -

@@ -1,11 +1,19 @@
 # EKS Ingress controller without a cloud load balancer (terraform ingress_mode = "hostport").
-# A DaemonSet puts one Traefik Pod on every public node, listening on node port 80.
-# Traefik itself stays unprivileged on container port 8000; the CNI maps 80 -> 8000.
+# A DaemonSet puts one Traefik Pod on every public node, listening on node port 8080.
+# Not 80: the EKS Pod Identity agent declares hostPort 80 on every node, so the
+# scheduler would never place Traefik there. Traefik stays unprivileged on 8000.
 deployment:
   kind: DaemonSet
+# A node port can only be held by one Pod, so replace Pods in place (stop old, start new);
+# the default surge rollout would start the new Pod first and wait forever for the port.
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
 ports:
   web:
-    hostPort: 80
+    hostPort: 8080 # keep in sync with terraform ingress_host_port
   websecure:
     expose: {default: false}
 service:

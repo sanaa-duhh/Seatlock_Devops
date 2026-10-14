@@ -70,17 +70,31 @@ module "eks" {
     }
   }
 
-  # In hostport mode Traefik answers on port 80 of every node.
-  node_security_group_additional_rules = local.public_nodes ? {
-    ingress_http = {
-      description = "HTTP to the Traefik Ingress controller"
-      type        = "ingress"
-      protocol    = "tcp"
-      from_port   = 80
-      to_port     = 80
-      cidr_blocks = var.ingress_allowed_cidrs
-    }
-  } : {}
+  node_security_group_additional_rules = merge(
+    {
+      # The EKS metrics-server add-on serves on 10251, which the module's default rules
+      # do not open; without it the HPA never gets CPU metrics.
+      ingress_metrics_server = {
+        description                   = "Control plane to metrics-server"
+        type                          = "ingress"
+        protocol                      = "tcp"
+        from_port                     = 10251
+        to_port                       = 10251
+        source_cluster_security_group = true
+      }
+    },
+    # In hostport mode Traefik answers on ingress_host_port of every node.
+    local.public_nodes ? {
+      ingress_http = {
+        description = "HTTP to the Traefik Ingress controller"
+        type        = "ingress"
+        protocol    = "tcp"
+        from_port   = var.ingress_host_port
+        to_port     = var.ingress_host_port
+        cidr_blocks = var.ingress_allowed_cidrs
+      }
+    } : {},
+  )
 }
 
 # EBS CSI driver, so the PostgreSQL StatefulSet can claim encrypted gp3 volumes.

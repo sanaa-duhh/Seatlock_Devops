@@ -4,7 +4,7 @@ region              = "ap-southeast-2"
 cluster_name        = "seatlock-demo"
 cluster_version     = "1.37"
 node_instance_types = ["t3.medium"]
-node_desired_size   = 2
+node_desired_size   = 3
 
 # "nlb" (private nodes + Network Load Balancer + NAT) or "hostport" (public nodes,
 # Traefik on port 80, no NAT or load balancer).

@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    User[Browser] -->|HTTP| LB[AWS NLB<br/>or node port 80]
+    User[Browser] -->|HTTP| LB[AWS NLB<br/>or node port 8080]
     LB --> Traefik[Traefik Ingress]
     Traefik -->|/| FE[frontend x2<br/>Nginx + React]
     Traefik -->|/api| BE[backend x2-5<br/>FastAPI, HPA]
@@ -17,7 +17,7 @@ flowchart LR
 
 In the default `nlb` mode the nodes run in private subnets and only the load balancer sits
 in the public subnets. In `hostport` mode (for accounts without load balancers, and for the
-cheapest demo) the nodes sit in public subnets and Traefik answers on port 80 of each node. One release of the Helm chart owns the application; the Ingress controller
+cheapest demo) the nodes sit in public subnets and Traefik answers on port 8080 of each node (80 is reserved by the EKS Pod Identity agent). One release of the Helm chart owns the application; the Ingress controller
 and monitoring stack are separate platform releases installed once by `scripts/eks-bootstrap.sh`.
 
 ## Booking correctness

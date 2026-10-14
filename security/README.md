@@ -62,7 +62,7 @@ the Ingress.
 |---|---|---|
 | AWS-0040 / AWS-0041 | EKS API endpoint is public | Lets the operator administer from any network during a short demo. Every request is still IAM-authenticated, and CI never calls the API (Argo CD pulls from Git). Narrow `cluster_endpoint_public_access_cidrs` to your IP for anything long-lived. |
 | AWS-0104 | Node security group allows all egress | Nodes must reach GHCR, ECR and AWS APIs. |
-| AWS-0164 | Subnets assign public IPs (`hostport` mode only) | Lets Traefik answer on node port 80 without a load balancer. The node security group admits only port 80 plus EKS control-plane traffic. The default `nlb` mode keeps nodes private. |
+| AWS-0164 | Subnets assign public IPs (`hostport` mode only) | Lets Traefik answer on node port 8080 without a load balancer. The node security group admits only that port plus EKS control-plane traffic. The default `nlb` mode keeps nodes private. |
 
 ## Reports in this folder
 

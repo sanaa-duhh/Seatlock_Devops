@@ -66,7 +66,7 @@ flowchart LR
         Prom[Prometheus] -->|scrape| BE
         Prom --> Graf[Grafana]
       end
-      Edge[NLB, or node port 80] --> Ingress
+      Edge[NLB, or node port 8080] --> Ingress
     end
     Argo -.->|pull desired state| Git
     EKS -.->|pull images| GHCR
@@ -234,7 +234,7 @@ deploys whatever `helm/seatlock/values-eks.yaml` on `main` says, and every pipel
 | Mode | Layout | Approx. cost in Sydney |
 |---|---|---|
 | `nlb` (default) | private nodes, NAT gateway, Traefik behind an AWS Network Load Balancer | about $0.31/h |
-| `hostport` | nodes in public subnets, Traefik on port 80 of each node, no NAT or LB | about $0.22/h |
+| `hostport` | nodes in public subnets, Traefik on port 8080 of each node, no NAT or LB | about $0.22/h |
 
 `make eks-down` deletes the Argo CD Application (and with it everything it deployed), any
 Kubernetes-created load balancer and the EBS volumes *before* `terraform destroy`, so the
@@ -309,7 +309,7 @@ python3 scripts/load.py --url http://<app-host>/api/events/1/seats --seconds 120
   `Secure` once it is enabled.
 - **Secrets** are created from a local, git-ignored file by the bootstrap script.
   Production would use AWS Secrets Manager with the External Secrets Operator.
-- **`hostport` mode** puts nodes in public subnets (only port 80 open) and uses one node's
+- **`hostport` mode** puts nodes in public subnets (only port 8080 open) and uses one node's
   IP as the app address. If that node is replaced, rerun the bootstrap to update it.
 - **The EKS API endpoint is public** (IAM-authenticated). Narrow
   `cluster_endpoint_public_access_cidrs` to your own IP for anything long-lived.

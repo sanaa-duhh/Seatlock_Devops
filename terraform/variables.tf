@@ -29,9 +29,13 @@ variable "node_instance_types" {
 }
 
 variable "node_desired_size" {
-  description = "Initial worker count. Two nodes leave room for the app, Ingress and monitoring."
+  description = <<-EOT
+    Initial worker count. A t3.medium runs at most 17 Pods (VPC CNI IP limit), and the
+    platform (monitoring, Argo CD, Loki, Ingress, add-ons) needs about 35 before the HPA
+    adds any backend Pods, so three nodes leave room to scale.
+  EOT
   type        = number
-  default     = 2
+  default     = 3
 }
 
 variable "ingress_mode" {
@@ -39,7 +43,7 @@ variable "ingress_mode" {
     How traffic reaches the Traefik Ingress controller:
       "nlb"      - nodes in private subnets behind a NAT gateway; an AWS Network Load
                    Balancer fronts Traefik. The production-style layout.
-      "hostport" - nodes in public subnets; Traefik listens on port 80 of every node.
+      "hostport" - nodes in public subnets; Traefik listens on ingress_host_port (8080) of every node.
                    No NAT gateway or load balancer. For accounts where load balancer
                    creation is not yet enabled, and the cheaper option for short demos.
   EOT
@@ -52,8 +56,17 @@ variable "ingress_mode" {
   }
 }
 
+variable "ingress_host_port" {
+  description = <<-EOT
+    hostport mode: node port Traefik listens on. Not 80, because the EKS Pod Identity
+    agent declares hostPort 80 on every node and the scheduler treats that as taken.
+  EOT
+  type        = number
+  default     = 8080
+}
+
 variable "ingress_allowed_cidrs" {
-  description = "Who may reach the app on port 80 in hostport mode."
+  description = "Who may reach the app on ingress_host_port in hostport mode."
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }

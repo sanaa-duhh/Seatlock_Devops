@@ -10,6 +10,6 @@ AWS-0041
 AWS-0104
 
 # ingress_mode = "hostport" only: worker nodes sit in public subnets with public IPs so
-# Traefik can answer on port 80 without a load balancer. The node security group admits
-# only port 80 (plus EKS control-plane traffic). The default "nlb" mode keeps nodes private.
+# Traefik can answer on port 8080 without a load balancer. The node security group admits
+# only that port (plus EKS control-plane traffic). The default "nlb" mode keeps nodes private.
 AWS-0164
