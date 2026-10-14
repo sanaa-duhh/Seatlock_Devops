@@ -1,7 +1,7 @@
 name: CI/CD
 
-# Pull requests run every quality and security gate. Pushes to main also publish
-# the scanned images to GHCR and deploy them to EKS.
+# Pull requests run every quality and security gate. Pushes to main also publish the
+# scanned images to GHCR and commit their tag to Git, where Argo CD deploys it to EKS.
 on:
   push:
     branches: [main]
@@ -273,61 +273,53 @@ jobs:
             echo "- \`$remote\`" >> "$GITHUB_STEP_SUMMARY"
           done
 
-  deploy:
-    name: Deploy to EKS
+  gitops:
+    name: Update GitOps image tag
     needs: publish
-    # Skipped automatically while no cluster exists (the variable is removed on teardown).
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.EKS_CLUSTER_NAME != ''
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
+    permissions:
+      contents: write # commit the new tag; CI never touches the cluster
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {ref: main}
+      - name: Point the EKS values at this commit's images
+        run: |
+          sed -i -E "s/^(  tag: )[0-9a-f]{40}$/\1$GITHUB_SHA/" helm/seatlock/values-eks.yaml
+          git diff --stat
+          if git diff --quiet; then echo "Already deployed"; exit 0; fi
+          # Attributed to the repository owner; [skip ci] stops this commit re-running the pipeline.
+          git config user.name "$GITHUB_REPOSITORY_OWNER"
+          git config user.email "${{ github.repository_owner_id }}+$GITHUB_REPOSITORY_OWNER@users.noreply.github.com"
+          git commit -am "Deploy ${GITHUB_SHA::7} to EKS [skip ci]"
+          for attempt in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && break; sleep 5; done
+          echo "### Argo CD will deploy \`${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    name: Verify the rollout on EKS
+    needs: gitops
+    # Skipped automatically while no cluster exists (the variable is removed on teardown).
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.APP_HOSTNAME != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: production
       url: http://${{ vars.APP_HOSTNAME }}
-    permissions:
-      contents: read
-      id-token: write # lets the OIDC path exchange GitHub's token for AWS credentials
-    env:
-      HOST: ${{ vars.APP_HOSTNAME }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: {persist-credentials: false}
-      # Preferred: keyless OIDC role session. Fallback: a deploy-only IAM user's key, for
-      # accounts whose policies forbid OIDC providers (terraform github_deploy_auth).
-      - name: AWS credentials (OIDC role)
-        if: vars.AWS_DEPLOY_ROLE_ARN != ''
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-      - name: AWS credentials (deploy user)
-        if: vars.AWS_DEPLOY_ROLE_ARN == ''
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-      - name: Configure kubectl
-        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
-      - name: Install checksum-verified helm
-        run: bash scripts/ci-tools.sh
-      - name: helm upgrade (rolls back automatically on failure)
+      - name: Wait for Argo CD to roll out this commit
+        env:
+          HOST: ${{ vars.APP_HOSTNAME }}
         run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
-          helm upgrade --install seatlock helm/seatlock -n seatlock -f helm/seatlock/values-eks.yaml \
-            --set backend.image="ghcr.io/$owner/seatlock-backend" \
-            --set frontend.image="ghcr.io/$owner/seatlock-frontend" \
-            --set-string backend.tag="$GITHUB_SHA" --set-string frontend.tag="$GITHUB_SHA" \
-            --set-string config.allowedOrigins="http://$HOST" \
-            --rollback-on-failure --wait --wait-for-jobs --timeout 10m
-      - name: Smoke test through the public Ingress
-        run: |
-          for i in $(seq 1 30); do curl -fsS "http://$HOST/" > /dev/null && break; sleep 5; done
-          curl -fsS "http://$HOST/api/events" | python3 -c "import json,sys; e=json.load(sys.stdin); assert e, 'no events'; print(len(e), 'events')"
-          running="$(kubectl -n seatlock get deploy seatlock-backend -o jsonpath='{.spec.template.spec.containers[0].image}')"
-          [[ "$running" == *":$GITHUB_SHA" ]] || { echo "Running $running, expected $GITHUB_SHA" >&2; exit 1; }
-          kubectl -n seatlock get pods,svc,ingress,hpa
-          {
-            echo "### Deployed \`${GITHUB_SHA:0:7}\` to EKS"
-            echo "App: http://$HOST"
-            helm history seatlock -n seatlock --max 5 | sed 's/^/    /'
-          } >> "$GITHUB_STEP_SUMMARY"
+          for i in $(seq 1 60); do
+            live="$(curl -fsS "http://$HOST/api/version" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' || true)"
+            echo "attempt $i: live version ${live:-unreachable}"
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              curl -fsS "http://$HOST/api/events" > /dev/null
+              echo "### Live on EKS: \`${GITHUB_SHA::7}\` at http://$HOST" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Argo CD did not roll out $GITHUB_SHA within 10 minutes" >&2
+          exit 1
