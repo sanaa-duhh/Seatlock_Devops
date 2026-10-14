@@ -3,6 +3,12 @@ kind: Job
 metadata:
   name: seatlock-migrate-{{ printf "%s%s" .Values.backend.tag .Values.backend.digest | sha256sum | trunc 8 }}-{{ .Release.Revision }}
   labels: {{- include "seatlock.labels" . | nindent 4 }}
+  annotations:
+    # Under Argo CD: a Sync hook that runs after the database (wave 0) and before
+    # the app (wave 2), recreated on every sync. Plain Helm ignores these keys.
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 2

@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: postgres
   labels: {{- include "seatlock.labels" . | nindent 4 }}
+  annotations: {argocd.argoproj.io/sync-wave: "0"}
 spec:
   clusterIP: None
   selector: {app.kubernetes.io/name: seatlock-postgres}
@@ -13,6 +14,7 @@ kind: StatefulSet
 metadata:
   name: seatlock-postgres
   labels: {{- include "seatlock.labels" . | nindent 4 }}
+  annotations: {argocd.argoproj.io/sync-wave: "0"}
 spec:
   serviceName: postgres
   replicas: 1

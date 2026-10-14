@@ -3,6 +3,7 @@ kind: ConfigMap
 metadata:
   name: seatlock-config
   labels: {{- include "seatlock.labels" . | nindent 4 }}
+  annotations: {argocd.argoproj.io/sync-wave: "0"}
 data:
   HOLD_SECONDS: {{ .Values.config.holdSeconds | quote }}
   COOKIE_SECURE: {{ .Values.config.cookieSecure | quote }}

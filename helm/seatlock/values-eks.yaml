@@ -1,9 +1,11 @@
-# Overrides for the AWS EKS environment. CI sets the image tags (commit SHA) and the
-# allowed browser origin (the app URL) at deploy time.
+# Overrides for the AWS EKS environment, deployed by Argo CD (gitops/application.yaml).
+# CI rewrites both image tags to the commit SHA after the images pass every gate.
 backend:
   image: ghcr.io/sanaa-duhh/seatlock-backend
+  tag: 93726e381ec1372f030e02a2baf23c4ef8944eb7
 frontend:
   image: ghcr.io/sanaa-duhh/seatlock-frontend
+  tag: 93726e381ec1372f030e02a2baf23c4ef8944eb7
 imagePullPolicy: IfNotPresent # tags are immutable commit SHAs
 postgres:
   storageClass: seatlock-gp3

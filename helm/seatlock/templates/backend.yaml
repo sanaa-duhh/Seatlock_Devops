@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: seatlock-backend
   labels: {{- include "seatlock.labels" . | nindent 4 }}
+  annotations: {argocd.argoproj.io/sync-wave: "2"}
 spec:
   {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -57,6 +58,7 @@ kind: Service
 metadata:
   name: backend
   labels: {app.kubernetes.io/name: seatlock-backend, app.kubernetes.io/part-of: seatlock}
+  annotations: {argocd.argoproj.io/sync-wave: "2"}
 spec:
   type: ClusterIP
   selector: {app.kubernetes.io/name: seatlock-backend}
