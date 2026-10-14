@@ -147,6 +147,12 @@ def health():
     return {"status": "ok", "service": "seatlock", "version": os.getenv("APP_VERSION", "local")}
 
 
+# Public through the Ingress (/api), so CI can confirm which commit is live after a GitOps sync.
+@app.get("/api/version")
+def version():
+    return {"version": os.getenv("APP_VERSION", "local")}
+
+
 @app.get("/ready")
 def ready(db: Session = Depends(get_db)):
     try:

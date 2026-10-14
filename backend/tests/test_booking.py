@@ -23,6 +23,11 @@ def test_health_and_readiness(client):
     assert client.get("/ready").json() == {"status": "ready"}
 
 
+def test_version_reports_deployed_commit(client, monkeypatch):
+    monkeypatch.setenv("APP_VERSION", "abc1234")
+    assert client.get("/api/version").json() == {"version": "abc1234"}
+
+
 def test_metrics(client):
     client.get("/api/events")
     response = client.get("/metrics")
