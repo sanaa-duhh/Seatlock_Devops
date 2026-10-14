@@ -15,6 +15,7 @@ RUN apk upgrade --no-cache \
     && chown 101:101 /etc/nginx/conf.d
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/templates/default.conf.template
+ENV SEATLOCK_API_HOST=backend
 COPY --chmod=755 nginx-dns.envsh /docker-entrypoint.d/05-seatlock-dns.envsh
 USER 101
 EXPOSE 8080
