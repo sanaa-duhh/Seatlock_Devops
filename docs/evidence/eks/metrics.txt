@@ -1,0 +1,9 @@
+# HELP seatlock_http_requests_total HTTP requests
+# TYPE seatlock_http_requests_total counter
+seatlock_http_requests_total{method="GET",route="/ready",status="200"} 342.0
+seatlock_http_requests_total{method="GET",route="/api/version",status="200"} 1.0
+seatlock_http_requests_total{method="GET",route="/api/session",status="200"} 1.0
+seatlock_http_requests_total{method="GET",route="/api/events/{event_id}/seats",status="200"} 439.0
+seatlock_http_requests_total{method="GET",route="/api/bookings",status="200"} 1.0
+seatlock_seat_conflicts_total 0.0
+seatlock_bookings_confirmed_total 0.0

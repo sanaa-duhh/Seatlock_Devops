@@ -1,0 +1,73 @@
+# aws_eks_addon.ebs_csi will be created
+# aws_eks_pod_identity_association.ebs_csi will be created
+# aws_iam_role.ebs_csi will be created
+# aws_iam_role_policy_attachment.ebs_csi will be created
+# module.eks.data.aws_eks_addon_version.this["coredns"] will be read during apply
+# (depends on a resource or a module with changes pending)
+# module.eks.data.aws_eks_addon_version.this["eks-pod-identity-agent"] will be read during apply
+# (depends on a resource or a module with changes pending)
+# module.eks.data.aws_eks_addon_version.this["kube-proxy"] will be read during apply
+# (depends on a resource or a module with changes pending)
+# module.eks.data.aws_eks_addon_version.this["metrics-server"] will be read during apply
+# (depends on a resource or a module with changes pending)
+# module.eks.data.aws_eks_addon_version.this["vpc-cni"] will be read during apply
+# (depends on a resource or a module with changes pending)
+# module.eks.aws_cloudwatch_log_group.this[0] will be created
+# module.eks.aws_eks_access_entry.this["cluster_creator"] will be created
+# module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"] will be created
+# module.eks.aws_eks_addon.before_compute["eks-pod-identity-agent"] will be created
+# module.eks.aws_eks_addon.before_compute["vpc-cni"] will be created
+# module.eks.aws_eks_addon.this["coredns"] will be created
+# module.eks.aws_eks_addon.this["kube-proxy"] will be created
+# module.eks.aws_eks_addon.this["metrics-server"] will be created
+# module.eks.aws_eks_cluster.this[0] will be created
+# module.eks.aws_iam_policy.cluster_encryption[0] will be created
+# module.eks.aws_iam_policy.custom[0] will be created
+# module.eks.aws_iam_role.this[0] will be created
+# module.eks.aws_iam_role_policy_attachment.cluster_encryption[0] will be created
+# module.eks.aws_iam_role_policy_attachment.custom[0] will be created
+# module.eks.aws_iam_role_policy_attachment.this["AmazonEKSClusterPolicy"] will be created
+# module.eks.aws_iam_role_policy_attachment.this["AmazonEKSVPCResourceController"] will be created
+# module.eks.aws_security_group.cluster[0] will be created
+# module.eks.aws_security_group.node[0] will be created
+# module.eks.aws_security_group_rule.cluster["ingress_nodes_443"] will be created
+# module.eks.aws_security_group_rule.node["egress_all"] will be created
+# module.eks.aws_security_group_rule.node["ingress_cluster_443"] will be created
+# module.eks.aws_security_group_rule.node["ingress_cluster_4443_webhook"] will be created
+# module.eks.aws_security_group_rule.node["ingress_cluster_6443_webhook"] will be created
+# module.eks.aws_security_group_rule.node["ingress_cluster_8443_webhook"] will be created
+# module.eks.aws_security_group_rule.node["ingress_cluster_9443_webhook"] will be created
+# module.eks.aws_security_group_rule.node["ingress_cluster_kubelet"] will be created
+# module.eks.aws_security_group_rule.node["ingress_http"] will be created
+# module.eks.aws_security_group_rule.node["ingress_nodes_ephemeral"] will be created
+# module.eks.aws_security_group_rule.node["ingress_self_coredns_tcp"] will be created
+# module.eks.aws_security_group_rule.node["ingress_self_coredns_udp"] will be created
+# module.eks.time_sleep.this[0] will be created
+# module.vpc.aws_default_network_acl.this[0] will be created
+# module.vpc.aws_default_route_table.default[0] will be created
+# module.vpc.aws_default_security_group.this[0] will be created
+# module.vpc.aws_internet_gateway.this[0] will be created
+# module.vpc.aws_route.public_internet_gateway[0] will be created
+# module.vpc.aws_route_table.private[0] will be created
+# module.vpc.aws_route_table.public[0] will be created
+# module.vpc.aws_route_table_association.private[0] will be created
+# module.vpc.aws_route_table_association.private[1] will be created
+# module.vpc.aws_route_table_association.public[0] will be created
+# module.vpc.aws_route_table_association.public[1] will be created
+# module.vpc.aws_subnet.private[0] will be created
+# module.vpc.aws_subnet.private[1] will be created
+# module.vpc.aws_subnet.public[0] will be created
+# module.vpc.aws_subnet.public[1] will be created
+# module.vpc.aws_vpc.this[0] will be created
+# module.eks.module.eks_managed_node_group["default"].aws_eks_node_group.this[0] will be created
+# module.eks.module.eks_managed_node_group["default"].aws_iam_role.this[0] will be created
+# module.eks.module.eks_managed_node_group["default"].aws_iam_role_policy_attachment.this["AmazonEC2ContainerRegistryReadOnly"] will be created
+# module.eks.module.eks_managed_node_group["default"].aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"] will be created
+# module.eks.module.eks_managed_node_group["default"].aws_iam_role_policy_attachment.this["AmazonEKS_CNI_Policy"] will be created
+# module.eks.module.eks_managed_node_group["default"].aws_launch_template.this[0] will be created
+# module.eks.module.kms.data.aws_iam_policy_document.this[0] will be read during apply
+# (config refers to values not yet known)
+# module.eks.module.kms.aws_kms_alias.this["cluster"] will be created
+# module.eks.module.kms.aws_kms_key.this[0] will be created
+# module.eks.module.eks_managed_node_group["default"].module.user_data.null_resource.validate_cluster_service_cidr will be created
+Plan: 60 to add, 0 to change, 0 to destroy.

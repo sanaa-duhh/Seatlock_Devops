@@ -1,0 +1,17 @@
+NAME                                     READY   STATUS    RESTARTS   AGE
+pod/seatlock-backend-5d5497f864-2s5bc    1/1     Running   0          27m
+pod/seatlock-backend-5d5497f864-bxr8c    1/1     Running   0          27m
+pod/seatlock-frontend-7864949bfd-dmlgp   1/1     Running   0          27m
+pod/seatlock-frontend-7864949bfd-vtnsl   1/1     Running   0          27m
+pod/seatlock-postgres-0                  1/1     Running   0          28m
+
+NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/backend    ClusterIP   172.20.9.1      <none>        8000/TCP   27m
+service/frontend   ClusterIP   172.20.146.95   <none>        80/TCP     27m
+service/postgres   ClusterIP   None            <none>        5432/TCP   28m
+
+NAME                                 CLASS     HOSTS   ADDRESS        PORTS   AGE
+ingress.networking.k8s.io/seatlock   traefik   *       54.252.130.2   80      27m
+
+NAME                                             STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-seatlock-postgres-0   Bound    pvc-c47c4af0-8df7-43d9-8817-c03d39aa964d   2Gi        RWO            seatlock-gp3   <unset>                 28m

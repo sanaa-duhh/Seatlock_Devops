@@ -1,0 +1,4 @@
+NAME      	NAMESPACE          	REVISION	UPDATED                             	STATUS  	CHART                       	APP VERSION
+argocd    	argocd             	1       	2026-10-14 19:04:36.955144 +0530 IST	deployed	argo-cd-10.10.3             	v3.5.5     
+monitoring	seatlock-monitoring	2       	2026-10-14 19:01:21.284002 +0530 IST	deployed	kube-prometheus-stack-92.1.0	v0.94.1    
+traefik   	ingress            	4       	2026-10-14 19:34:11.352392 +0530 IST	deployed	traefik-41.6.1              	v3.7.13    
