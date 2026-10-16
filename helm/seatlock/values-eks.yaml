@@ -2,10 +2,10 @@
 # CI rewrites both image tags to the commit SHA after the images pass every gate.
 backend:
   image: ghcr.io/sanaa-duhh/seatlock-backend
-  tag: b014ad5f6d5e550a4cfa51e25056b41db8dc4866
+  tag: 78d41c21f68fcb31a00f78bd42dbe494dfad4f82
 frontend:
   image: ghcr.io/sanaa-duhh/seatlock-frontend
-  tag: b014ad5f6d5e550a4cfa51e25056b41db8dc4866
+  tag: 78d41c21f68fcb31a00f78bd42dbe494dfad4f82
 imagePullPolicy: IfNotPresent # tags are immutable commit SHAs
 postgres:
   storageClass: seatlock-gp3
