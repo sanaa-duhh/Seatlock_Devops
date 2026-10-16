@@ -128,7 +128,7 @@ export function App() {
                 <option key={c}>{c}</option>
               ))}
             </select>
-            <span className="demo-badge">DEMO EXPERIENCE</span>
+            <span className="demo-badge">LIVE ON EKS</span>
           </div>
         </header>
         <main id="main">
