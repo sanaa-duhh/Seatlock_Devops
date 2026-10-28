@@ -2,6 +2,6 @@
 pytest>=8,<10
 pytest-cov>=6,<8
 httpx>=0.28,<1
-ruff>=0.11,<1
+ruff>=0.17.2,<1
 bandit>=1.8,<2
 pip-audit>=2.8,<3
